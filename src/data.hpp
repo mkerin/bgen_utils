@@ -1187,6 +1187,7 @@ class Data
 		// Step 1; Read in raw covariates
 		// - also makes a record of missing values
 		read_environment();
+		read_covar();
 
 		// Step 2; Reduce raw covariates and phenotypes to complete cases
 		// - may change value of n_samples
@@ -1196,6 +1197,13 @@ class Data
 		// Step 3; Normalise covars
 		center_matrix( E, n_env );
 		scale_matrix( E, n_env, env_names );
+
+		if(n_covar > 0){
+			center_matrix(W, n_env);
+			scale_matrix(W, n_covar, covar_names);
+
+			regress_first_mat_from_second(W, "covars", covar_names, E, "env");
+		}
 
 		// Step 4; compute correlations
 		int ch = 0;
@@ -1218,6 +1226,29 @@ class Data
 		if(n_constant_variance > 0){
 			std::cout << " Removed " << n_constant_variance  << " column(s) with zero variance:" << std::endl;
 		}
+	}
+
+	void regress_first_mat_from_second(const EigenDataMatrix& A,
+									   const std::string& Astring,
+									   const std::vector<std::string>& A_names,
+									   EigenDataMatrix& yy,
+									   const std::string& yy_string){
+		//
+		std::cout << "Regressing " << Astring << " from " << yy_string << ":" << std::endl;
+		unsigned long nnn = A_names.size();
+		for(int cc = 0; cc < std::min(nnn, (unsigned long) 10); cc++){
+			std::cout << ( cc > 0 ? ", " : "" ) << A_names[cc];
+		}
+		if (nnn > 10){
+			std::cout << "... (" << nnn << " variables)";
+		}
+		std::cout << std::endl;
+
+		Eigen::MatrixXd AtA = (A.transpose() * A).cast<double>();
+		Eigen::MatrixXd Aty = (A.transpose() * yy).cast<double>();
+
+		Eigen::MatrixXd bb = solve(AtA, Aty);
+		yy -= A * bb.cast<scalarData>();
 	}
 
 	void compute_correlations_chunk(EigenRefDataArrayXX dXtEEX_chunk){
