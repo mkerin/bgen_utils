@@ -1187,7 +1187,9 @@ class Data
 		// Step 1; Read in raw covariates
 		// - also makes a record of missing values
 		read_environment();
-		read_covar();
+		if(params.covar_file != "NULL"){
+			read_covar();
+		}
 
 		// Step 2; Reduce raw covariates and phenotypes to complete cases
 		// - may change value of n_samples
@@ -1198,10 +1200,11 @@ class Data
 		center_matrix( E, n_env );
 		scale_matrix( E, n_env, env_names );
 
-		if(n_covar > 0){
-			center_matrix(W, n_env);
+		if(n_covar > 0) {
+			center_matrix(W, n_covar);
 			scale_matrix(W, n_covar, covar_names);
-
+		}
+		if(n_covar > 0){
 			regress_first_mat_from_second(W, "covars", covar_names, E, "env");
 		}
 
