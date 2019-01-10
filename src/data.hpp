@@ -1207,7 +1207,7 @@ class Data
 
 			assert(n_var == G.cols());
 
-			EigenDataArrayX dXtEEX_chunk(n_var, n_env * n_env);
+			EigenDataArrayXX dXtEEX_chunk(n_var, n_env * n_env);
 			compute_correlations_chunk(dXtEEX_chunk);
 			output_correlations(dXtEEX_chunk);
 
