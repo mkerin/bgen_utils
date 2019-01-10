@@ -11,6 +11,7 @@
 #include <map>
 #include <vector>
 #include <iostream>
+#include <iomanip>
 #include <random>
 #include <string>
 #include <string>
@@ -40,7 +41,7 @@ inline Eigen::VectorXd getCol(const Eigen::MatrixXd &A, size_t col);
 inline Eigen::MatrixXd solve(const Eigen::MatrixXd &A, const Eigen::MatrixXd &b);
 
 
-class data
+class Data
 {
 	public :
 	parameters params;
@@ -114,8 +115,9 @@ class data
 	// 	bgen_pass = false; // No bgen file set; read_bgen_chunk won't run.
 	// }
 
-	data( std::string filename ) {
-		bgenView = genfile::bgen::View::create(filename);
+	Data( const parameters& my_params ) : params(my_params){
+
+		bgenView = genfile::bgen::View::create(my_params.bgen_file);
 		bgen_pass = true;
 		n_samples = bgenView->number_of_samples();
 		n_var_parsed = 0;
@@ -131,7 +133,7 @@ class data
 		std::cout << "Compiled from git branch: master" << std::endl;
 	}
 
-	~data() {
+	~Data() {
 		// system time at end
 		auto end = std::chrono::system_clock::now();
 		std::chrono::duration<double> elapsed_seconds = end-start;
@@ -227,13 +229,16 @@ class data
 		}
 	}
 
-	void output_correlations(int jj, EigenRefDataArrayX vec){
-		outf << SNPID[jj] << " " << chromosome[jj] << " " << rsid[jj] << " " << position[jj];
-		outf << " " << alleles[jj][0] << " " << alleles[jj][1];
-		for (int ll = 0; ll < n_env * n_env; ll++){
-			outf << " " << vec(ll);
+	void output_correlations(EigenRefDataArrayX vec){
+		outf << std::scientific << std::setprecision(8);
+		for (long jj = 0; jj < n_var; jj++) {
+			outf << SNPID[jj] << " " << chromosome[jj] << " " << rsid[jj] << " " << position[jj];
+			outf << " " << alleles[jj][0] << " " << alleles[jj][1];
+			for (int ll = 0; ll < n_env * n_env; ll++) {
+				outf << " " << vec(ll);
+			}
+			outf << std::endl;
 		}
-		outf << std::endl;
 	}
 
 	bool read_bgen_chunk() {
@@ -1200,27 +1205,11 @@ class data
 			std::cout << ", " << n_var_parsed-1 << "/" << bgenView->number_of_variants();
 			std::cout << " variants parsed)" << std::endl;
 
-			maf_cum.insert(maf_cum.end(),               maf.begin(), maf.end());
-			rsid_cum.insert(rsid_cum.end(),             rsid.begin(), rsid.end());
-			chromosome_cum.insert(chromosome_cum.end(), chromosome.begin(), chromosome.end());
-			position_cum.insert(position_cum.end(),     position.begin(), position.end());
-			alleles_cum.insert(alleles_cum.end(),       alleles.begin(), alleles.end());
-
 			assert(n_var == G.cols());
 
-			EigenDataArrayX cl_j;
-			EigenDataArrayX dXtEEX_jj(n_env * n_env);
-			for (int jj = 0; jj < n_var; jj++){
-				cl_j = G.col(jj);
-				for (int ll = 0; ll < n_env; ll++){
-					for (int mm = 0; mm <= ll; mm++){
-						double x = (cl_j * E.array().col(ll) * E.array().col(mm) * cl_j).sum();
-						dXtEEX_jj(ll*n_env + mm) = x;
-						dXtEEX_jj(mm*n_env + ll) = x;
-					}
-				}
-				output_correlations(jj, dXtEEX_jj);
-			}
+			EigenDataArrayX dXtEEX_chunk(n_var, n_env * n_env);
+			compute_correlations_chunk(dXtEEX_chunk);
+			output_correlations(dXtEEX_chunk);
 
 			n_total_var += n_var;
 			ch++;
@@ -1228,6 +1217,22 @@ class data
 
 		if(n_constant_variance > 0){
 			std::cout << " Removed " << n_constant_variance  << " column(s) with zero variance:" << std::endl;
+		}
+	}
+
+	void compute_correlations_chunk(EigenRefDataArrayXX dXtEEX_chunk){
+		assert(dXtEEX_chunk.rows() == n_var);
+		assert(dXtEEX_chunk.cols() == n_env * n_env);
+		EigenDataArrayX cl_j;
+		for (int jj = 0; jj < n_var; jj++){
+			cl_j = G.col(jj);
+			for (int ll = 0; ll < n_env; ll++){
+				for (int mm = 0; mm <= ll; mm++){
+					double x = (cl_j * E.array().col(ll) * E.array().col(mm) * cl_j).sum();
+					dXtEEX_chunk(jj, ll*n_env + mm) = x;
+					dXtEEX_chunk(jj, mm*n_env + ll) = x;
+				}
+			}
 		}
 	}
 

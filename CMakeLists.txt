@@ -56,3 +56,16 @@ target_include_directories(${TARGET}_Xf PRIVATE ${BGEN}/genfile/include ${BGEN}/
 target_compile_options(${TARGET}_Xf PRIVATE -DDATA_AS_FLOAT ${LOC_COMPILE_OPTS})
 set_target_properties(${TARGET}_Xf PROPERTIES LINK_FLAGS "${LIB-DIRS}")
 target_link_libraries(${TARGET}_Xf ${BGEN_LIB} ${DB_LIB} ${SQLITE_LIB} ${ZSTD_LIB} ${LIBS} ${LINKER_OPTS})
+
+# Tests
+add_executable(catch_tests tests/tests-main.cpp)
+target_link_libraries(catch_tests ${BGEN_LIB} ${DB_LIB} ${SQLITE_LIB} ${ZSTD_LIB} ${LIBS} ${LINKER_OPTS})
+target_compile_options(catch_tests PRIVATE ${LOC_COMPILE_OPTS})
+target_include_directories(catch_tests PRIVATE ${BGEN}/genfile/include ${BGEN}/3rd_party/zstd-1.1.0/lib ${BGEN}/db/include ${BGEN}/3rd_party/sqlite3 ${BGEN}/3rd_party/boost_1_55_0)
+set_target_properties(catch_tests PROPERTIES LINK_FLAGS "${LIB-DIRS}")
+
+add_executable(catch_tests_Xf tests/tests-main.cpp)
+target_link_libraries(catch_tests_Xf ${BGEN_LIB} ${DB_LIB} ${SQLITE_LIB} ${ZSTD_LIB} ${LIBS} ${LINKER_OPTS})
+target_compile_options(catch_tests_Xf PRIVATE -DDATA_AS_FLOAT ${LOC_COMPILE_OPTS})
+target_include_directories(catch_tests_Xf PRIVATE ${BGEN}/genfile/include ${BGEN}/3rd_party/zstd-1.1.0/lib ${BGEN}/db/include ${BGEN}/3rd_party/sqlite3 ${BGEN}/3rd_party/boost_1_55_0)
+set_target_properties(catch_tests_Xf PROPERTIES LINK_FLAGS "${LIB-DIRS}")

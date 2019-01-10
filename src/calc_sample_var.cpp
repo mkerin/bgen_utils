@@ -43,12 +43,11 @@ int main( int argc, char** argv ) {
 
 	try {
 		parse_arguments(p, argc, argv);
-		data Data( p.bgen_file );
-		Data.params = p;
+		Data data(p);
 
 		// filter - incl sample ids
 		if(p.incl_sids_file != "NULL"){
-			Data.read_incl_sids();
+			data.read_incl_sids();
 		}
 		genfile::bgen::IndexQuery::UniquePtr query = genfile::bgen::IndexQuery::create(p.bgi_file);
 
@@ -66,19 +65,19 @@ int main( int argc, char** argv ) {
 
 		// filter - incl rsids
 		if(p.incl_snps){
-			Data.read_incl_rsids();
+			data.read_incl_rsids();
 			std::cout << "Filtering SNPs by rsid, using bgi file: " << p.bgi_file << std::endl;
 			// genfile::bgen::IndexQuery::UniquePtr query = genfile::bgen::IndexQuery::create(p.bgi_file);
-			query->include_rsids( Data.incl_rsid_list );
+			query->include_rsids( data.incl_rsid_list );
 			// query->include_rsids( Data.rsid_list ).initialise();
 			// Data.bgenView->set_query( query );
 		}
 
 		if(p.excl_snps){
-			Data.read_excl_rsids();
+			data.read_excl_rsids();
 			std::cout << "Filtering SNPs by rsid, using bgi file: " << p.bgi_file << std::endl;
 			// genfile::bgen::IndexQuery::UniquePtr query = genfile::bgen::IndexQuery::create(p.bgi_file);
-			query->exclude_rsids( Data.excl_rsid_list );
+			query->exclude_rsids( data.excl_rsid_list );
 			// query->include_rsids( Data.rsid_list ).initialise();
 			// Data.bgenView->set_query( query );
 		}
@@ -96,23 +95,23 @@ int main( int argc, char** argv ) {
 
 		// Summary info
 		query->initialise();
-		Data.bgenView->set_query( query );
-		Data.bgenView->summarise(std::cout);
+		data.bgenView->set_query( query );
+		data.bgenView->summarise(std::cout);
 
 		std::cout << "Computing sum of column variances" << std::endl;
-		Data.output_init();
+		data.output_init();
 		if(p.mode_ssv){
-			Data.calc_ssv();
+			data.calc_ssv();
 		} else if(p.mode_gen_pheno) {
-			Data.gen_pheno();
+			data.gen_pheno();
 		} else if(p.mode_gen2_pheno) {
-			Data.gen2_pheno();
+			data.gen2_pheno();
 		} else if(p.mode_compute_correlations){
-			Data.compute_correlations();
+			data.compute_correlations();
 		} else if(p.mode_print_keys){
-			Data.print_keys();
+			data.print_keys();
 		}
-		Data.output_results();
+		data.output_results();
 
 		return 0 ;
 	}
