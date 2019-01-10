@@ -229,13 +229,13 @@ class Data
 		}
 	}
 
-	void output_correlations(EigenRefDataArrayX vec){
+	void output_correlations(EigenRefDataArrayXX vec){
 		outf << std::scientific << std::setprecision(8);
 		for (long jj = 0; jj < n_var; jj++) {
 			outf << SNPID[jj] << " " << chromosome[jj] << " " << rsid[jj] << " " << position[jj];
 			outf << " " << alleles[jj][0] << " " << alleles[jj][1];
 			for (int ll = 0; ll < n_env * n_env; ll++) {
-				outf << " " << vec(ll);
+				outf << " " << vec(jj, ll);
 			}
 			outf << std::endl;
 		}
