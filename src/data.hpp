@@ -279,6 +279,7 @@ class Data
 		G.resize(n_samples, params.chunk_size);
 
 		std::size_t valid_count, jj = 0;
+		Eigen::Array<unsigned char, Eigen::Dynamic, 1> M_j(n_samples);
 		while ( jj < params.chunk_size && bgen_pass ) {
 			bgen_pass = bgenView->read_variant( &SNPID_j, &rsid_j, &chr_j, &pos_j, &alleles_j );
 			if (!bgen_pass) break;
@@ -394,11 +395,11 @@ class Data
 
 				// Compress
 				for (std::uint32_t ii = 0; ii < n_samples; ii++){
-					dosage_j[ii] = std::floor(std::min(dosage_j[ii], (scalarData) (L - 1e-6)) * invIntervalWidth);
+					M_j[ii] = std::floor(std::min(dosage_j[ii], (scalarData) (L - 1e-6)) * invIntervalWidth);
 				}
 
 				// Decompress
-				dosage_j = (dosage_j + 0.5) * intervalWidth;
+				dosage_j = (M_j.cast<double>() + 0.5) * intervalWidth;
 
 				mu    = dosage_j.mean();
 				sigma = (dosage_j - mu).square().sum();

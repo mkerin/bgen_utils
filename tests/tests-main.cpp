@@ -23,8 +23,11 @@ TEST_CASE("Data") {
 		Data data(p);
 		data.read_environment();
 		data.reduce_to_complete_cases();
+
+		CHECK(data.E(0, 0) == Approx(0.785198212));
 		data.center_matrix(data.E, data.n_env);
 		data.scale_matrix(data.E, data.n_env, data.env_names);
+		CHECK(data.E(0, 0) == Approx(0.8957059881));
 
 		data.read_bgen_chunk();
 		EigenDataArrayXX dXtEEX_chunk(data.n_var, data.n_env * data.n_env);
@@ -32,15 +35,91 @@ TEST_CASE("Data") {
 
 		CHECK(data.n_env == 4);
 		CHECK(data.n_samples == 50);
-		CHECK(dXtEEX_chunk(0, 0) == Approx(38.99636));
-		CHECK(dXtEEX_chunk(1, 0) == Approx(38.3718));
-		CHECK(dXtEEX_chunk(2, 0) == Approx(33.81659));
-		CHECK(dXtEEX_chunk(3, 0) == Approx(35.8492));
+		CHECK(dXtEEX_chunk(0, 0) == Approx(38.9610805993));
+		CHECK(dXtEEX_chunk(1, 0) == Approx(38.2995451744));
+		CHECK(dXtEEX_chunk(2, 0) == Approx(33.7077899144));
+		CHECK(dXtEEX_chunk(3, 0) == Approx(35.7391671158));
 
-		CHECK(dXtEEX_chunk(0, 4) == Approx(-2.63218));
-		CHECK(dXtEEX_chunk(1, 4) == Approx(-12.96763));
-		CHECK(dXtEEX_chunk(2, 4) == Approx(-11.66501));
-		CHECK(dXtEEX_chunk(3, 4) == Approx(-7.20105));
+		CHECK(dXtEEX_chunk(0, 4) == Approx(-2.6239467101));
+		CHECK(dXtEEX_chunk(1, 4) == Approx(-13.0001255314));
+		CHECK(dXtEEX_chunk(2, 4) == Approx(-11.6635557299));
+		CHECK(dXtEEX_chunk(3, 4) == Approx(-7.2154836264));
+	}
+
+	SECTION("dXtEEX computed correctly (low mem) w covars") {
+		p.covar_file = "data/io_test/age.txt";
+		p.bgen_file = "data/io_test/n50_p100.bgen";
+		p.bgi_file = "data/io_test/n50_p100.bgen.bgi";
+		p.mode_low_mem = true;
+		Data data(p);
+		data.read_environment();
+		data.read_covar();
+		data.reduce_to_complete_cases();
+
+		CHECK(data.E(0, 0) == Approx(0.785198212));
+		data.center_matrix(data.E, data.n_env);
+		data.scale_matrix(data.E, data.n_env, data.env_names);
+		CHECK(data.E(0, 0) == Approx(0.8957059881));
+
+		data.center_matrix(data.W, data.n_covar);
+		data.scale_matrix(data.W, data.n_covar, data.covar_names);
+		data.regress_first_mat_from_second(data.W, "covars", data.covar_names, data.E, "env");
+		CHECK(data.E(0, 0) == Approx(0.9959851422));
+
+		data.read_bgen_chunk();
+		EigenDataArrayXX dXtEEX_chunk(data.n_var, data.n_env * data.n_env);
+		data.compute_correlations_chunk(dXtEEX_chunk);
+
+		CHECK(data.n_env == 4);
+		CHECK(data.n_samples == 50);
+		CHECK(dXtEEX_chunk(0, 0) == Approx(42.2994405499));
+		CHECK(dXtEEX_chunk(1, 0) == Approx(43.2979303929));
+		CHECK(dXtEEX_chunk(2, 0) == Approx(37.6440444004));
+		CHECK(dXtEEX_chunk(3, 0) == Approx(40.9258647207));
+
+		CHECK(dXtEEX_chunk(0, 4) == Approx(-4.0453940676));
+		CHECK(dXtEEX_chunk(1, 4) == Approx(-15.6140263169));
+		CHECK(dXtEEX_chunk(2, 4) == Approx(-13.2508795732));
+		CHECK(dXtEEX_chunk(3, 4) == Approx(-9.8081456731));
+	}
+
+	SECTION("dXtEEX computed correctly (low mem), covars, incl sids") {
+		p.covar_file = "data/io_test/age.txt";
+		p.bgen_file = "data/io_test/n50_p100.bgen";
+		p.bgi_file = "data/io_test/n50_p100.bgen.bgi";
+		p.incl_sids_file = "data/io_test/sample_ids.txt";
+		p.mode_low_mem = true;
+		Data data(p);
+		data.read_environment();
+		data.read_covar();
+		data.read_incl_sids();
+		data.reduce_to_complete_cases();
+
+		CHECK(data.E(0, 0) == Approx(0.785198212));
+		data.center_matrix(data.E, data.n_env);
+		data.scale_matrix(data.E, data.n_env, data.env_names);
+		CHECK(data.E(0, 0) == Approx(0.7617238014));
+
+		data.center_matrix(data.W, data.n_covar);
+		data.scale_matrix(data.W, data.n_covar, data.covar_names);
+		data.regress_first_mat_from_second(data.W, "covars", data.covar_names, data.E, "env");
+		CHECK(data.E(0, 0) == Approx(0.8123860763));
+
+		data.read_bgen_chunk();
+		EigenDataArrayXX dXtEEX_chunk(data.n_var, data.n_env * data.n_env);
+		data.compute_correlations_chunk(dXtEEX_chunk);
+
+		CHECK(data.n_env == 4);
+		CHECK(data.n_samples == 28);
+		CHECK(dXtEEX_chunk(0, 0) == Approx(23.2334219303));
+		CHECK(dXtEEX_chunk(1, 0) == Approx(27.9920667408));
+		CHECK(dXtEEX_chunk(2, 0) == Approx(24.7041225993));
+		CHECK(dXtEEX_chunk(3, 0) == Approx(24.2423580715));
+
+		CHECK(dXtEEX_chunk(0, 4) == Approx(-1.056112897));
+		CHECK(dXtEEX_chunk(1, 4) == Approx(-8.526431457));
+		CHECK(dXtEEX_chunk(2, 4) == Approx(-6.5950206611));
+		CHECK(dXtEEX_chunk(3, 4) == Approx(-3.6842212598));
 	}
 
 	SECTION("dXtEEX computed correctly (high mem)") {
