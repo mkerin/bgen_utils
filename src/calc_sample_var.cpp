@@ -41,6 +41,10 @@ void read_directory(const std::string& name, std::vector<std::string>& v);
 int main( int argc, char** argv ) {
 	parameters p;
 
+	std::cout << "=================="<< std::endl;
+	std::cout << "LEMMA utils v" << VERSION_MAJOR << "." << VERSION_MINOR << "." << VERSION_PATCH << std::endl;
+	std::cout << "==================" << std::endl << std::endl;
+
 	try {
 		parse_arguments(p, argc, argv);
 		Data data(p);

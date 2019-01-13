@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.7.2)
-project(bgen_prog VERSION 0.10.5)
+project(LEMMA_utils VERSION 0.1.0)
 
 set(CMAKE_CXX_STANDARD 11)
 
@@ -30,6 +30,11 @@ elseif(CMAKE_CURRENT_SOURCE_DIR MATCHES /homes/kerin)
 else()
     message( FATAL_ERROR "Unexpected root directory structure. Where is the BGEN lib located?")
 endif()
+
+##Add project version number to preprocessor macros
+list(APPEND LOC_COMPILE_OPTS -DVERSION_MAJOR=${PROJECT_VERSION_MAJOR})
+list(APPEND LOC_COMPILE_OPTS -DVERSION_MINOR=${PROJECT_VERSION_MINOR})
+list(APPEND LOC_COMPILE_OPTS -DVERSION_PATCH=${PROJECT_VERSION_PATCH})
 
 set(SOURCES src/calc_sample_var.cpp)
 

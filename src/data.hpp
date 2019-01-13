@@ -321,7 +321,7 @@ class Data
 			double maf_j = d1 / (2.0 * valid_count);
 
 			// Flip dosage vector if maf > 0.5
-			if(maf_j > 0.5){
+			if(params.flip_high_maf_variants && maf_j > 0.5){
 				dosage_j = (2.0 - dosage_j);
 				for (std::uint32_t ii = 0; ii < n_samples; ii++){
 					if (missing_genos.count(ii) > 0){
