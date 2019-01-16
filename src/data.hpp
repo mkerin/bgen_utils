@@ -399,7 +399,7 @@ class Data
 				}
 
 				// Decompress
-				dosage_j = (M_j.cast<double>() + 0.5) * intervalWidth;
+				dosage_j = (M_j.cast<scalarData>() + 0.5) * intervalWidth;
 
 				mu    = dosage_j.mean();
 				sigma = (dosage_j - mu).square().sum();
