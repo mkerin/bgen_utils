@@ -72,7 +72,8 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 		"--use_raw_covars",
 		"--use_raw_env",
 		"--random_seed",
-		"--compute-env-snp-correlations"
+		"--compute-env-snp-correlations",
+		"--print_causal_rsids"
 	};
 
 	std::set<std::string>::iterator set_it;
@@ -321,6 +322,11 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 				check_counts(in_str, i, 1, argc);
 				p.chunk_size = std::stoi(argv[i + 1]); // bgen file
 				i += 1;
+			}
+
+			if(strcmp(in_str, "--print_causal_rsids") == 0) {
+				p.print_causal_rsids = true;
+				i += 0;
 			}
 
 		}
