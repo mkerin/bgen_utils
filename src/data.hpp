@@ -220,12 +220,25 @@ class Data
 					outf_coeffs << " " << alleles_cum[ii][0] << " " << alleles_cum[ii][1] << " " << B(ii, 0) << " " << B(ii, 1) << std::endl;
 				}
 			}
-		} else if (params.mode_print_keys){
-			// for (std::size_t ii = 0; ii < n_total_var; ii++){
-			// 	outf << chromosome_cum[ii] << " " << rsid_cum[ii] << " " << position_cum[ii];
-			// 	outf << " " << alleles_cum[ii][0] << " " << alleles_cum[ii][1];
- 			// 	outf << " " << maf_cum[ii] << " " << info_cum[ii] << std::endl;
-			// }
+
+			if(params.print_causal_rsids){
+				std::string ofile_coeffs;
+				ofile_coeffs = fstream_init(outf_coeffs, params.out_file, "_nonzero_beta_rsids");
+				std::cout << "Writing rsids of nonzero betas to " << ofile_coeffs << std::endl;
+				for (std::size_t ii = 0; ii < n_total_var; ii++){
+					if(std::abs(B(ii, 0)) > 1e-6){
+						outf_coeffs << rsid_cum[ii] << std::endl;
+					}
+				}
+
+				ofile_coeffs = fstream_init(outf_coeffs, params.out_file, "_nonzero_gamma_rsids");
+				std::cout << "Writing rsids of nonzero gammas to " << ofile_coeffs << std::endl;
+				for (std::size_t ii = 0; ii < n_total_var; ii++){
+					if(std::abs(B(ii, 1)) > 1e-6){
+						outf_coeffs << rsid_cum[ii] << std::endl;
+					}
+				}
+			}
 		}
 	}
 
@@ -428,6 +441,12 @@ class Data
  			std::cout << n_var_incomplete << "/" << n_var;
 			std::cout << " variants incomplete)" << std::endl;
 		}
+
+		maf_cum.insert(maf_cum.end(),               maf.begin(), maf.end());
+		rsid_cum.insert(rsid_cum.end(),             rsid.begin(), rsid.end());
+		chromosome_cum.insert(chromosome_cum.end(), chromosome.begin(), chromosome.end());
+		position_cum.insert(position_cum.end(),     position.begin(), position.end());
+		alleles_cum.insert(alleles_cum.end(),       alleles.begin(), alleles.end());
 
 		if(jj == 0){
 			// Immediate EOF
@@ -1000,12 +1019,6 @@ class Data
 				std::cout << " variants parsed)" << std::endl;
 			}
 
-			maf_cum.insert(maf_cum.end(),               maf.begin(), maf.end());
-			rsid_cum.insert(rsid_cum.end(),             rsid.begin(), rsid.end());
-			chromosome_cum.insert(chromosome_cum.end(), chromosome.begin(), chromosome.end());
-			position_cum.insert(position_cum.end(),     position.begin(), position.end());
-			alleles_cum.insert(alleles_cum.end(),       alleles.begin(), alleles.end());
-
 			assert(G.cols() == n_var);
 			if(n_env > 0) assert(E.rows() == n_samples);
 			assert(G.rows() == n_samples);
@@ -1281,13 +1294,6 @@ class Data
 			std::cout << "Chunk " << ch+1 << " read (size " << n_var;
 			std::cout << ", " << n_var_parsed-1 << "/" << bgenView->number_of_variants();
 			std::cout << " variants parsed)" << std::endl;
-
-			maf_cum.insert(maf_cum.end(),               maf.begin(), maf.end());
-			rsid_cum.insert(rsid_cum.end(),             rsid.begin(), rsid.end());
-			chromosome_cum.insert(chromosome_cum.end(), chromosome.begin(), chromosome.end());
-			position_cum.insert(position_cum.end(),     position.begin(), position.end());
-			alleles_cum.insert(alleles_cum.end(),       alleles.begin(), alleles.end());
-			keys_cum.insert(keys_cum.end(),             keys.begin(), keys.end());
 
 			for (std::size_t ii = 0; ii < n_var; ii++){
 				outf << chromosome[ii] << " " << rsid[ii] << " " << position[ii];
