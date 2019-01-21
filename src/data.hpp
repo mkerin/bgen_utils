@@ -91,8 +91,8 @@ class Data
 	EigenDataArrayX Y; // phenotype matrix
 	EigenDataMatrix W; // covariate matrix
 	EigenDataMatrix E;
-	EigenDataMatrix B; // matrix of coefficients (beta, gamma)
-	EigenDataArrayX Xb, Zg, Ealpha, Wtau, noise;
+	EigenDataMatrix B, B2; // matrix of coefficients (beta, gamma)
+	EigenDataArrayX Xb, Zg, Xb2, Zg2, Ealpha, Wtau, noise;
 	genfile::bgen::View::UniquePtr bgenView;
 	std::vector< double > beta, tau, neglogP, neglogP_2dof;
 	std::vector< std::vector< double > > gamma;
@@ -804,6 +804,16 @@ class Data
 		std::cout << params.coeffs_file << std::endl;
 	}
 
+	void read_coeffs2( ){
+		std::vector<std::string> coeff_names;
+		read_grid_file( params.coeffs2_file, B2, coeff_names );
+		std::vector<std::string> true_names = {"beta", "gamma"};
+		assert(B2.cols() == 2);
+		assert(true_names == coeff_names);
+		std::cout << B2.rows() << " coefficients read in from ";
+		std::cout << params.coeffs2_file << std::endl;
+	}
+
 	void read_environment( ){
 		// Read covariates to Eigen matrix W
 		if ( params.env_file != "NULL" ) {
@@ -940,6 +950,9 @@ class Data
 			read_environment();
 		}
 		read_coeffs();
+		if(params.coeffs2_file != "NULL"){
+			read_coeffs2();
+		}
 
 		if(n_env > 1){
 			std::cout << "WARNING: " << n_env << " cols detected in " << params.env_file << ". Just using first" << std::endl;
@@ -1010,6 +1023,8 @@ class Data
 		// S2; genetic or interaction effects
 		Xb = EigenDataArrayX::Zero(n_samples);
 		Zg = EigenDataArrayX::Zero(n_samples);
+		Xb2 = EigenDataArrayX::Zero(n_samples);
+		Zg2 = EigenDataArrayX::Zero(n_samples);
 		int ch = 0;
 		while (read_bgen_chunk()) {
 			// Raw dosage read in to G
@@ -1030,7 +1045,15 @@ class Data
 				if(n_env > 0){
 					Zg += G.col(kk).array() * E.array() * B(kk + n_total_var, 1);
 				}
+
+				if(params.coeffs2_file != "NULL"){
+					Xb2 += G.col(kk).array() * B2(kk + n_total_var, 0);
+					if(n_env > 0){
+						Zg2 += G.col(kk).array() * B2(kk + n_total_var, 1);
+					}
+				}
 			}
+
 
 			n_total_var += n_var;
 			ch++;

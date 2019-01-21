@@ -61,9 +61,12 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 		"--mode_gen_pheno",
 		"--mode_gen2_pheno",
 		"--coeffs",
+		"--coeffs2",
 		"--true_sigma",
 		"--true_hb",
 		"--true_hg",
+		"--true_hb2",
+		"--true_hg2",
 		"--true_hc",
 		"--true_he",
 		"--keep_constant_variants",
@@ -92,8 +95,9 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 
 	// read in and check option flags
 	for (i = 0; i < argc; i++) {
+		std::string in_str1(argv[i]);
 		in_str = argv[i];
-		if (strcmp(in_str, "--version") == 0 || strcmp(in_str, "--help") == 0) {
+		if (in_str1 == "--version" || in_str1 == "--help") {
 			std::cout << "ERROR: flag '" << in_str << "' cannot be used with any other flags." << std::endl;
 			std::exit(EXIT_FAILURE);
 		}
@@ -105,6 +109,7 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 	for(i = 0; i < argc; i++){
 		if(*argv[i] == '-'){
 			in_str = argv[i];
+			std::string in_str1(argv[i]);
 			set_it = option_list.find(in_str);
 
 			if(set_it == option_list.end()) {
@@ -120,7 +125,7 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 
 
 			// Data inputs
-			if(strcmp(in_str, "--bgen") == 0) {
+			if(in_str1 == "--bgen") {
 				check_counts(in_str, i, 1, argc);
 				p.bgen_file = argv[i + 1]; // bgen file
 				check_file_exists(p.bgen_file);
@@ -128,66 +133,87 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 				i += 1;
 			}
 
-			if(strcmp(in_str, "--covar") == 0) {
+			if(in_str1 == "--covar") {
 				check_counts(in_str, i, 1, argc);
 				p.covar_file = argv[i + 1]; // covar file
 				check_file_exists(p.covar_file);
 				i += 1;
 			}
 
-			if(strcmp(in_str, "--environment") == 0) {
+			if(in_str1 == "--environment") {
 				check_counts(in_str, i, 1, argc);
 				p.env_file = argv[i + 1]; // covar file
 				check_file_exists(p.env_file);
 				i += 1;
 			}
 
-			if(strcmp(in_str, "--random_seed") == 0) {
+			if(in_str1 == "--random_seed") {
 					p.random_seed = std::stoul(argv[i + 1]);
 					i += 1;
 			}
 
-			if(strcmp(in_str, "--true_sigma") == 0) {
+			if(in_str1 == "--true_sigma") {
 				check_counts(in_str, i, 1, argc);
 				p.sigma = std::stod(argv[i + 1]);
 				p.sim_w_noise = true;
 				i += 1;
 			}
 
-			if(strcmp(in_str, "--true_hb") == 0) {
+			if(in_str1 == "--true_hb") {
 				check_counts(in_str, i, 1, argc);
 				p.hb = std::stod(argv[i + 1]);
 				p.rescale_coeffs = true;
 				i += 1;
 			}
 
-			if(strcmp(in_str, "--true_hg") == 0) {
+			if(in_str1 == "--true_hg") {
 				check_counts(in_str, i, 1, argc);
 				p.hg = std::stod(argv[i + 1]);
 				p.rescale_coeffs = true;
 				i += 1;
 			}
 
-			if(strcmp(in_str, "--true_hc") == 0) {
+			if(in_str1 == "--true_hb2") {
+				check_counts(in_str, i, 1, argc);
+				p.hb2 = std::stod(argv[i + 1]);
+				p.rescale_coeffs = true;
+				i += 1;
+			}
+
+			if(in_str1 == "--true_hg2") {
+				check_counts(in_str, i, 1, argc);
+				p.hg2 = std::stod(argv[i + 1]);
+				p.rescale_coeffs = true;
+				i += 1;
+			}
+
+			if(in_str1 == "--true_hc") {
 				check_counts(in_str, i, 1, argc);
 				p.hc = std::stod(argv[i + 1]);
 				i += 1;
 			}
 
-			if(strcmp(in_str, "--true_he") == 0) {
+			if(in_str1 == "--true_he") {
 				check_counts(in_str, i, 1, argc);
 				p.he = std::stod(argv[i + 1]);
 				i += 1;
 			}
 
-			if(strcmp(in_str, "--coeffs") == 0) {
+			if(in_str1 == "--coeffs") {
 				check_counts(in_str, i, 1, argc);
 				p.coeffs_file = argv[i + 1]; // covar file
 				check_file_exists(p.coeffs_file);
 				i += 1;
 			}
 
-			if(strcmp(in_str, "--out") == 0) {
+			if(in_str1 == "--coeffs2") {
+				check_counts(in_str, i, 1, argc);
+				p.coeffs2_file = argv[i + 1];
+				check_file_exists(p.coeffs2_file);
+				i += 1;
+			}
+
+			if(in_str1 == "--out") {
 				if (check_out == 1) {
 					std::cout << "ERROR: flag '" << in_str << "' can only be provided once." << std::endl;
 					exit(EXIT_FAILURE);
@@ -199,69 +225,69 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 			}
 
 			// Mode
-			if(strcmp(in_str, "--mode_ssv") == 0) {
+			if(in_str1 == "--mode_ssv") {
 				p.mode_ssv = true;
 				i += 0;
 			}
 
-			if(strcmp(in_str, "--print-keys") == 0) {
+			if(in_str1 == "--print-keys") {
 				p.mode_print_keys = true;
 				i += 0;
 			}
 
-			if(strcmp(in_str, "--use_raw_covars") == 0) {
+			if(in_str1 == "--use_raw_covars") {
 				p.use_raw_covars = true;
 				i += 0;
 			}
 
-			if(strcmp(in_str, "--use_raw_env") == 0) {
+			if(in_str1 == "--use_raw_env") {
 				p.use_raw_env = true;
 				i += 0;
 			}
 
-			if(strcmp(in_str, "--compute-env-snp-correlations") == 0) {
+			if(in_str1 == "--compute-env-snp-correlations") {
 				p.mode_compute_correlations = true;
 				i += 0;
 			}
 
-			if(strcmp(in_str, "--mode_gen_pheno") == 0) {
+			if(in_str1 == "--mode_gen_pheno") {
 				p.mode_gen_pheno = true;
 				i += 0;
 			}
 
-			if(strcmp(in_str, "--mode_gen2_pheno") == 0) {
+			if(in_str1 == "--mode_gen2_pheno") {
 				p.mode_gen2_pheno = true;
 				p.sim_w_noise = true;
 				i += 0;
 			}
 
-			if(strcmp(in_str, "--mode_low_mem") == 0) {
+			if(in_str1 == "--mode_low_mem") {
 				std::cout << "WARNING: Simulating effects of low-mem mode" << std::endl;
 				p.mode_low_mem = true;
 				i += 0;
 			}
 
 			// Filters
-			if(strcmp(in_str, "--keep_constant_variants") == 0) {
+			if(in_str1 == "--keep_constant_variants") {
 				p.keep_constant_variants = true;
 				i += 0;
 			}
 
-			if(strcmp(in_str, "--maf") == 0) {
+			if(in_str1 == "--maf") {
 				check_counts(in_str, i, 1, argc);
 				p.maf_lim = true;
 				p.min_maf = std::stod(argv[i + 1]); // bgen file
 				i += 1;
 			}
 
-			if(strcmp(in_str, "--info") == 0) {
+			if(in_str1 == "--info") {
 				check_counts(in_str, i, 1, argc);
 				p.info_lim = true;
 				p.min_info = std::stod(argv[i + 1]); // bgen file
 				i += 1;
 			}
 
-			if(strcmp(in_str, "--range") == 0) {
+			if(in_str1 == "--range") {
 				static bool check = 0;
 				if (check == 1) {
 					std::cout << "ERROR: flag '" << in_str << "' can only be provided once." << std::endl;
@@ -276,14 +302,14 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 				i += 3;
 			}
 
-			if(strcmp(in_str, "--incl_sample_ids") == 0) {
+			if(in_str1 == "--incl_sample_ids") {
 				check_counts(in_str, i, 1, argc);
 				p.incl_sids_file = argv[i + 1]; // include sample ids file
 				check_file_exists(p.incl_sids_file);
 				i += 1;
 			}
 
-			if(strcmp(in_str, "--incl_rsids") == 0) {
+			if(in_str1 == "--incl_rsids") {
 				check_counts(in_str, i, 1, argc);
 				p.incl_snps = true;
 				p.incl_rsids_file = argv[i + 1]; // include variant ids file
@@ -291,7 +317,7 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 				i += 1;
 			}
 
-			if(strcmp(in_str, "--excl_rsids") == 0) {
+			if(in_str1 == "--excl_rsids") {
 				check_counts(in_str, i, 1, argc);
 				p.excl_snps = true;
 				p.excl_rsids_file = argv[i + 1]; // include variant ids file
@@ -299,7 +325,7 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 				i += 1;
 			}
 
-			if(strcmp(in_str, "--rsid") == 0) {
+			if(in_str1 == "--rsid") {
 				check_counts(in_str, i, 1, argc);
 				p.select_rsid = true;
 				int jj = i+1;
@@ -313,18 +339,18 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 			}
 
 			// Other options
-			if(strcmp(in_str, "--no_geno_check") == 0) {
+			if(in_str1 == "--no_geno_check") {
 				p.geno_check = false;
 				i += 0;
 			}
 
-			if(strcmp(in_str, "--chunk") == 0) {
+			if(in_str1 == "--chunk") {
 				check_counts(in_str, i, 1, argc);
 				p.chunk_size = std::stoi(argv[i + 1]); // bgen file
 				i += 1;
 			}
 
-			if(strcmp(in_str, "--print_causal_rsids") == 0) {
+			if(in_str1 == "--print_causal_rsids") {
 				p.print_causal_rsids = true;
 				i += 0;
 			}
