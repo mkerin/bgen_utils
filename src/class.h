@@ -9,7 +9,7 @@
 class parameters {
 	public :
 		std::string bgen_file, bgi_file, pheno_file, out_file, covar_file, incl_rsids_file, incl_sids_file;
-		std::string excl_rsids_file, coeffs_file, coeffs2_file, chr, env_file;
+		std::string excl_rsids_file, coeffs_file, coeffs2_file, chr, env_file, env_profile_file;
 		std::vector< std::string > rsid;
 		int chunk_size, missing_code;
 		uint32_t start, end;
