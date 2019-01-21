@@ -47,6 +47,7 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 		"--bgen",
 		"--covar",
 		"--environment",
+		"--env_profile",
 		"--chunk",
 		"--range",
 		"--maf",

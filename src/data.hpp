@@ -39,7 +39,8 @@ inline size_t numCols(const Eigen::MatrixXd &A);
 inline void setCol(Eigen::MatrixXd &A, const Eigen::VectorXd &v, size_t col);
 inline Eigen::VectorXd getCol(const Eigen::MatrixXd &A, size_t col);
 inline Eigen::MatrixXd solve(const Eigen::MatrixXd &A, const Eigen::MatrixXd &b);
-
+inline scalarData var(const EigenDataArrayX& vv);
+void sim_gaussian_noise(EigenRefDataArrayX vv, const double& sigma_sq, std::mt19937& generator);
 
 class Data
 {
@@ -93,6 +94,7 @@ class Data
 	EigenDataMatrix E;
 	EigenDataMatrix B; // matrix of coefficients (beta, gamma)
 	EigenDataArrayX Xb, Zg, Ealpha, Wtau, noise;
+	EigenDataMatrix env_profile;
 	genfile::bgen::View::UniquePtr bgenView;
 	std::vector< double > beta, tau, neglogP, neglogP_2dof;
 	std::vector< std::vector< double > > gamma;
@@ -804,7 +806,7 @@ class Data
 		std::cout << params.coeffs_file << std::endl;
 	}
 
-	void read_environment( ){
+	void read_environment(){
 		// Read covariates to Eigen matrix W
 		if ( params.env_file != "NULL" ) {
 			read_txt_file( params.env_file, E, n_env, env_names, missing_envs );
@@ -812,6 +814,14 @@ class Data
 			throw std::logic_error( "Tried to read NULL env file." );
 		}
 		E_reduced = false;
+	}
+
+	void read_env_profile(){
+		// Read covariates to Eigen matrix W
+		std::vector<std::string> placeholder;
+		read_grid_file(params.env_profile_file, env_profile, placeholder);
+		assert(env_profile.cols() == 1);
+		// assert(env_profile.rows() == n_env);
 	}
 
 	template <typename EigenMat>
@@ -963,50 +973,6 @@ class Data
 			scale_matrix( E, n_env, env_names );
 		}
 
-		// Generate random effects
-		// http://itscompiling.eu/2016/04/11/generating-random-numbers-cpp/
-		// Random seed
-		if(params.random_seed == -1){
-			std::random_device rd;
-			params.random_seed = rd();
-		}
-		std::cout << "Initialising random sample generator with seed " << params.random_seed << std::endl;
-		std::mt19937 generator{params.random_seed};
-		EigenDataVector tau(n_covar), alpha(n_env);
-		noise.resize(n_samples);
-		Ealpha.resize(n_samples);
-		Wtau.resize(n_samples);
-
-		std::normal_distribution<scalarData> noise_normal(0.0, std::sqrt(params.sigma));
-		std::cout << "Adding white noise with variance: " << params.sigma << std::endl;
-		for (std::size_t ii = 0; ii < n_samples; ii++){
-			noise(ii) = noise_normal(generator);
-		}
-
-		// additive covar effects
-		double sigma_c = params.sigma * params.hc / (1.0 - params.hc - params.he - params.hb - params.hg) / (double) n_covar;
-		if(params.hc > 0){
-			std::normal_distribution<scalarData> covar_normal(0.0, std::sqrt(sigma_c));
-			for (int ee = 0; ee < n_covar; ee++){
-				tau(ee) = covar_normal(generator);
-			}
-			Wtau = W * tau;
-		} else {
-			Wtau = EigenDataVector::Zero(n_samples);
-		}
-
-		// additive env effects
-		double sigma_e = params.sigma * params.he / (1.0 - params.hc - params.he - params.hb - params.hg) / (double) n_env;
-		if(params.he > 0){
-			std::normal_distribution<scalarData> env_normal(0.0, std::sqrt(sigma_e));
-			for (int ee = 0; ee < n_env; ee++){
-				alpha(ee) = env_normal(generator);
-			}
-			Ealpha = E * alpha;
-		} else {
-			Ealpha = EigenDataVector::Zero(n_samples);
-		}
-
 		// S2; genetic or interaction effects
 		Xb = EigenDataArrayX::Zero(n_samples);
 		Zg = EigenDataArrayX::Zero(n_samples);
@@ -1044,54 +1010,72 @@ class Data
 			std::cout << " Removed " << n_constant_variance  << " column(s) with zero variance:" << std::endl;
 		}
 
-		if(params.rescale_coeffs){
-			// // compute variance
-			double var_xb = (Xb - Xb.mean()).square().sum() / ((double) n_samples - 1.0);
-			double var_noise  = (noise - noise.mean()).square().sum() / ((double) n_samples - 1.0);
-			//
-			// // rescaling for correct heritability
-			double sf_b = std::sqrt(params.sigma * params.hb / (1.0 - params.hc - params.he - params.hb - params.hg) / var_xb);
-			std::cout << "Rescaling components for correct trait variance" << std::endl;
-			std::cout << "beta scale factor: " << sf_b << std::endl;
-			Xb    *= sf_b;
-			noise *= std::sqrt(params.sigma / var_noise);
-			B.col(0) = B.col(0) * sf_b;
+		// Generate random effects
+		// http://itscompiling.eu/2016/04/11/generating-random-numbers-cpp/
+		// Random seed
+		if(params.random_seed == -1){
+			std::random_device rd;
+			params.random_seed = rd();
+		}
+		std::cout << "Initialising random sample generator with seed " << params.random_seed << std::endl;
+		std::mt19937 generator{params.random_seed};
 
-			if(n_env > 0){
-				double sf_g;
-				if(params.hg > 0){
-					double var_zg = (Zg - Zg.mean()).square().sum() / ((double) n_samples - 1.0);
-					sf_g = std::sqrt(params.sigma * params.hg / (1.0 - params.hc - params.he - params.hb - params.hg) / var_zg);
-				} else {
-					sf_g = 0.0;
-				}
-				std::cout << "gamma scale factor: " << sf_g << std::endl;
-				Zg    *= sf_g;
-				B.col(1) = B.col(1) * sf_g;
-			}
+		// target variances
+		double sigma_b, sigma_g = 0, sigma_c = 0, sigma_e = 0;
+		sigma_b = params.hb / (1.0 - params.hc - params.he - params.hb - params.hg);
+		if(n_env > 0){
+			sigma_g = params.hg / (1.0 - params.hc - params.he - params.hb - params.hg);
+			sigma_e = params.he / (1.0 - params.hc - params.he - params.hb - params.hg);
+		}
+		if(n_covar > 0){
+			sigma_c = params.hc / (1.0 - params.hc - params.he - params.hb - params.hg);
+		}
 
-			if(params.he > 0){
-				double var_Ea = (Ealpha - Ealpha.mean()).square().sum() / ((double) n_samples - 1.0);
-				double sf_e = std::sqrt(sigma_e * (double) n_env / var_Ea);
-				std::cout << "Ealpha scale factor: " << sf_e << std::endl;
-				Ealpha    *= sf_e;
-			}
+		// additive noise
+		noise.resize(n_samples);
+		sim_gaussian_noise(noise, 1, generator);
+		noise    *= std::sqrt(params.sigma / var(noise));
 
-			if(params.hc > 0){
-				double var_Wt = (Wtau - Wtau.mean()).square().sum() / ((double) n_samples - 1.0);
-				double sf_c = std::sqrt(sigma_c * (double) n_covar / var_Wt);
-				std::cout << "Wtau scale factor: " << sf_c << std::endl;
-				Wtau    *= sf_c;
+		// additive covar effects
+		if(params.hc > 0){
+			EigenDataVector tau(n_covar);
+			sim_gaussian_noise(tau, 1, generator);
+			Wtau = W * tau;
+			double sf = params.sigma * sigma_c / var(Wtau);
+			Wtau     *= std::sqrt(sf);
+		} else {
+			Wtau = EigenDataVector::Zero(n_samples);
+		}
 
-				// double var_W0 = (W.col(0) - W.col(0).mean()).square().sum() / ((double) n_samples - 1.0);
-				// std::cout << "var Wt: " << var_Wt << std::endl;
-				// std::cout << "var W0: " << var_W0 << std::endl;
-				// std::cout << "sigma_c: " << sigma_c << std::endl;
-				// std::cout << "n_covar: " << n_covar << std::endl;
-			}
+		// additive env effects
+		if(params.he > 0){
+			EigenDataVector alpha(n_env);
+			sim_gaussian_noise(alpha, 1, generator);
+			Ealpha = E * alpha;
+			double sf = params.sigma * sigma_e / var(Ealpha);
+			Ealpha    *= std::sqrt(sf);
+		} else {
+			Ealpha = EigenDataVector::Zero(n_samples);
+		}
+
+		// rescaling for correct heritability
+		scalarData var_xb = var(Xb);
+		Xb       *= std::sqrt(params.sigma * sigma_b / var_xb);
+		B.col(0) *= std::sqrt(params.sigma * sigma_b / var_xb);
+
+		if(n_env > 0){
+			scalarData var_zg = var(Zg);
+			Zg       *= std::sqrt(params.sigma * sigma_g / var_zg);
+			B.col(1) *= std::sqrt(params.sigma * sigma_g / var_zg);
 		}
 
 		Y = Wtau + Ealpha + Xb + Zg + noise;
+		std::cout << "Heritability partition:" << std::endl;
+		std::cout << "hb = " << var(Xb) / var(Y) << std::endl;
+		std::cout << "hg = " << var(Zg) / var(Y) << std::endl;
+		std::cout << "he = " << var(Ealpha) / var(Y) << std::endl;
+		std::cout << "hc = " << var(Wtau) / var(Y) << std::endl;
+		std::cout << "Noise has variance: " << params.sigma << std::endl;
 	}
 
 	void gen2_pheno(){
@@ -1365,6 +1349,20 @@ inline Eigen::MatrixXd solve(const Eigen::MatrixXd &A, const Eigen::MatrixXd &b)
 		std::exit(EXIT_FAILURE);
 	}
 	return x;
+}
+
+inline scalarData var(const EigenDataArrayX& vv){
+	scalarData res = (vv - vv.mean()).square().sum();
+ 	res /= ((scalarData) vv.rows() - 1.0);
+	return res;
+}
+
+void sim_gaussian_noise(EigenRefDataArrayX vv, const double& sigma_sq, std::mt19937& generator){
+	std::normal_distribution<scalarData> gaussian(0.0, std::sqrt(sigma_sq));
+	long nrows = vv.rows();
+	for (long ii = 0; ii < nrows; ii++){
+		vv(ii) = gaussian(generator);
+	}
 }
 
 #endif
