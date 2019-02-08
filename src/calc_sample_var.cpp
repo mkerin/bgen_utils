@@ -102,10 +102,12 @@ int main( int argc, char** argv ) {
 		data.bgenView->set_query( query );
 		data.bgenView->summarise(std::cout);
 
-		std::cout << "Computing sum of column variances" << std::endl;
 		data.output_init();
 		if(p.mode_ssv){
+			std::cout << "Computing sum of column variances" << std::endl;
 			data.calc_ssv();
+		} else if(p.mode_pred_pheno){
+			data.pred_pheno();
 		} else if(p.mode_gen_pheno) {
 			data.gen_pheno();
 		} else if(p.mode_gen2_pheno) {

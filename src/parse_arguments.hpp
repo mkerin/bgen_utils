@@ -60,6 +60,7 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 		"--no_geno_check",
 		"--mode_ssv",
 		"--mode_gen_pheno",
+		"--mode_pred_pheno",
 		"--mode_gen2_pheno",
 		"--coeffs",
 		"--coeffs2",
@@ -253,6 +254,11 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 
 			if(in_str1 == "--mode_gen_pheno") {
 				p.mode_gen_pheno = true;
+				i += 0;
+			}
+
+			if(in_str1 == "--mode_pred_pheno") {
+				p.mode_pred_pheno = true;
 				i += 0;
 			}
 

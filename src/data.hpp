@@ -178,6 +178,13 @@ class Data
 		if(params.mode_ssv){
 			std::cout << "Writing ssv stats to " << ofile << std::endl;
 			outf << "s_x\ts_z\tn\tp" << std::endl;
+		} else if (params.mode_pred_pheno){
+			std::cout << "Writing predicted phenotype to " << ofile << std::endl;
+			outf << "y" << std::endl;
+
+			std::string ofile_pred   = fstream_init(outf_pred, params.out_file, "_predicted_effects");
+			std::cout << "Writing predicted effects to " << ofile_pred << std::endl;
+			outf_pred << "Xbeta\tZgamma" << std::endl;
 		} else if(params.mode_gen_pheno || params.mode_gen2_pheno){
 			std::string ofile_pred   = fstream_init(outf_pred, params.out_file, "_predicted_effects");
 
@@ -206,6 +213,14 @@ class Data
 		if(params.mode_ssv){
 			outf << s_x << "\t" << s_z << "\t" << n_samples << "\t";
 			outf << n_total_var << std::endl;
+		} else if (params.mode_pred_pheno){
+			for (std::size_t ii = 0; ii < n_samples; ii++){
+				outf_pred << Xb(ii) << "\t" << Zg(ii) << std::endl;
+			}
+
+			for (std::size_t ii = 0; ii < n_samples; ii++){
+				outf << Y(ii) << std::endl;
+			}
 		} else if(params.mode_gen_pheno || params.mode_gen2_pheno){
 			for (std::size_t ii = 0; ii < n_samples; ii++){
 				outf_pred << Wtau(ii) <<"\t" << Ealpha(ii) <<"\t" << Xb(ii) << "\t" << Zg(ii) << "\t" << noise(ii) << std::endl;
@@ -946,7 +961,7 @@ class Data
 		}
 	}
 
-	void gen_pheno(){
+	void pred_pheno(){
 		// Gen vector of fitted effects Y_hat = age + X beta + Z gamma
 		// Gaussian noise added when writing to file
 
@@ -1031,6 +1046,13 @@ class Data
 		if(n_constant_variance > 0){
 			std::cout << " Removed " << n_constant_variance  << " column(s) with zero variance:" << std::endl;
 		}
+		Y = Xb + Zg + Xb2 + Zg2;
+	}
+
+	void gen_pheno(){
+
+		// Get predicted effects
+		pred_pheno();
 
 		// Generate random effects
 		// http://itscompiling.eu/2016/04/11/generating-random-numbers-cpp/
