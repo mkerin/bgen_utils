@@ -51,13 +51,13 @@ class Data
 	std::vector< std::string > chromosome, rsid, SNPID;
 	std::vector< uint32_t > position;
 	std::vector< std::vector< std::string > > alleles;
-	std::vector< std::string > keys;
+	std::vector< std::string > SNPKEYS;
 
 	// cumulative
 	std::vector< std::string > chromosome_cum, rsid_cum, SNPID_cum;
 	std::vector< uint32_t > position_cum;
 	std::vector< std::vector< std::string > > alleles_cum;
-	std::vector< std::string > keys_cum;
+	std::vector< std::string > SNPKEYS_cum;
 
 	int n_pheno;              // number of phenotypes
 	int n_covar;              // number of covariates
@@ -96,6 +96,11 @@ class Data
 	EigenDataArrayX Xb, Zg, Xb2, Zg2, Ealpha, Wtau, noise;
 	EigenDataMatrix env_profile;
 
+	// Matching snps via the SNPKEY
+	std::map<std::string, long> B_SNPKEYS_map;
+	std::vector<std::string> B_SNPKEYS;
+	bool match_snpkeys;
+
 	genfile::bgen::View::UniquePtr bgenView;
 	std::vector< double > beta, tau, neglogP, neglogP_2dof;
 	std::vector< std::vector< double > > gamma;
@@ -128,6 +133,8 @@ class Data
 		n_constant_variance = 0;
 		n_covar = 0;
 		n_env = 0;
+
+		match_snpkeys = false;  // Used when reconstructing yhat from coeffs
 
 		// system time at start
 		start = std::chrono::system_clock::now();
@@ -301,7 +308,7 @@ class Data
 		chromosome.clear();
 		position.clear();
 		alleles.clear();
-		keys.clear();
+		SNPKEYS.clear();
 		SNPID.clear();
 
 		// Resize genotype matrix
@@ -399,8 +406,8 @@ class Data
 			alleles.push_back(alleles_j);
 			SNPID.push_back(SNPID_j);
 
-			std::string key_j = chr_j + "~" + std::to_string(pos_j) + "~" + alleles_j[0] + "~" + alleles_j[1];
-			keys.push_back(key_j);
+			std::string key_j = gen_snpkey(chr_j, pos_j, alleles_j);
+			SNPKEYS.push_back(key_j);
 			if(params.mode_print_keys){
 				jj++;
 				continue;
@@ -694,6 +701,91 @@ class Data
 		}
 	}
 
+
+	void read_txt_file_w_context( const std::string& filename,
+                                  const int& col_offset,
+                                  EigenDataMatrix & M,
+                                  std::vector<std::string>& M_snpids,
+                                  std::vector<std::string>& col_names){
+		/*
+		Txt file where the first column is snp ids, then x-1 contextual,
+		then a matrix to be read into memory.
+
+		Reads file twice to ascertain number of lines.
+
+		col_offset - how many contextual columns to skip
+		*/
+
+		// Reading from file
+		boost_io::filtering_istream fg;
+		std::string gz_str = ".gz";
+		if (filename.find(gz_str) != std::string::npos) {
+			fg.push(boost_io::gzip_decompressor());
+		}
+		fg.push(boost_io::file_source(filename));
+		if (!fg) {
+			std::cout << "ERROR: " << filename << " not opened." << std::endl;
+			std::exit(EXIT_FAILURE);
+		}
+
+		// Read file twice to ascertain number of lines
+		int n_lines = 0;
+		std::string line;
+		getline(fg, line); // skip header
+		while (getline(fg, line)) {
+			n_lines++;
+		}
+		fg.reset();
+		if (filename.find(gz_str) != std::string::npos) {
+			fg.push(boost_io::gzip_decompressor());
+		}
+		fg.push(boost_io::file_source(filename));
+
+		// Reading column names
+		if (!getline(fg, line)) {
+			std::cout << "ERROR: " << filename << " contains zero lines" << std::endl;
+			std::exit(EXIT_FAILURE);
+		}
+		std::stringstream ss;
+		std::string s;
+		int n_cols = 0;
+		col_names.clear();
+		ss.clear();
+		ss.str(line);
+		while (ss >> s) {
+			++n_cols;
+			col_names.push_back(s);
+		}
+		assert(n_cols > col_offset);
+
+		// Write remainder of file to Eigen matrix M
+		M.resize(n_lines, n_cols - col_offset);
+		int i = 0;
+		double tmp_d;
+		while (getline(fg, line)) {
+			ss.clear();
+			ss.str(line);
+			for (int k = 0; k < n_cols; k++) {
+				std::string sss;
+				ss >> sss;
+				if (k == 0){
+					M_snpids.push_back(sss);
+				}
+				if (k >= col_offset){
+					try{
+						M(i, k-col_offset) = stod(sss);
+					} catch (const std::invalid_argument &exc){
+						std::cout << "Found value " << sss << " on line " << i;
+	 					std::cout << " of file " << filename << std::endl;
+						throw std::runtime_error("Unexpected value");
+					}
+				}
+			}
+			i++; // loop should end at i == n_samples
+		}
+		std::cout << n_lines << " rows found in " << filename << std::endl;
+	}
+
 	void center_matrix( EigenDataMatrix & M,
 						int& n_cols ){
 		// Center eigen matrix passed by reference.
@@ -805,17 +897,28 @@ class Data
 		W_reduced = false;
 	}
 
-	void read_coeffs( ){
+	void read_coeffs(){
 		// Read coefficients to eigen matrix B
+		std::vector<std::string> case1 = {"beta", "gamma"};
+		std::vector<std::string> case2 = {"SNPKEY", "beta", "gamma"};
+
 		std::vector<std::string> coeff_names;
-		if ( params.coeffs_file != "NULL" ) {
-			read_grid_file( params.coeffs_file, B, coeff_names );
+		read_file_header(params.coeffs_file, coeff_names);
+
+		if(coeff_names == case1){
+			read_grid_file(params.coeffs_file, B, coeff_names);
+		} else if (coeff_names == case2){
+			read_txt_file_w_context(params.coeffs_file, 1, B, B_SNPKEYS,
+                                    coeff_names);
+			match_snpkeys = true;
+			for (long jj = 0; jj < B_SNPKEYS.size(); jj++){
+				B_SNPKEYS_map[B_SNPKEYS[jj]] = jj;
+			}
 		} else {
-			throw std::logic_error( "Tried to read NULL covar file." );
+			throw std::logic_error("Unexpected header in --coeffs");
 		}
-		std::vector<std::string> true_names = {"beta", "gamma"};
+
 		assert(B.cols() == 2);
-		assert(true_names == coeff_names);
 		std::cout << B.rows() << " coefficients read in from ";
 		std::cout << params.coeffs_file << std::endl;
 	}
@@ -1006,6 +1109,7 @@ class Data
 		Xb2 = EigenDataArrayX::Zero(n_samples);
 		Zg2 = EigenDataArrayX::Zero(n_samples);
 		int ch = 0;
+		long n_matched = 0;
 		while (read_bgen_chunk()) {
 			// Raw dosage read in to G
 			if(ch % 10 == 0){
@@ -1015,21 +1119,34 @@ class Data
 			}
 
 			assert(G.cols() == n_var);
-			if(n_env > 0) assert(E.rows() == n_samples);
 			assert(G.rows() == n_samples);
-			assert(B.rows() >= n_total_var + n_var);
+			if(!match_snpkeys){
+				assert(B.rows() >= n_total_var + n_var);
+			}
 
 			// Add effects to Y
+			long coeff_index = 0;
 			for (int kk = 0; kk < n_var; kk++){
-				Xb += G.col(kk).array() * B(kk + n_total_var, 0);
+				auto it = B_SNPKEYS_map.find(SNPKEYS[kk]);
+				if(it != B_SNPKEYS_map.end()){
+					coeff_index = it->second;
+					n_matched++;
+				} else if (match_snpkeys){
+					continue;
+				} else {
+					coeff_index = kk + n_total_var;
+				}
+
+				Xb += G.col(kk).array() * B(coeff_index, 0);
 				if(n_env > 0){
-					Zg += G.col(kk).array() * E.array() * B(kk + n_total_var, 1);
+					Zg += G.col(kk).array() * E.array() * B(coeff_index, 1);
 				}
 
 				if(params.coeffs2_file != "NULL"){
-					Xb2 += G.col(kk).array() * B2(kk + n_total_var, 0);
+					assert(!match_snpkeys);  // Not yet implemented
+					Xb2 += G.col(kk).array() * B2(coeff_index, 0);
 					if(n_env > 0){
-						Zg2 += G.col(kk).array() * E.array() * B2(kk + n_total_var, 1);
+						Zg2 += G.col(kk).array() * E.array() * B2(coeff_index, 1);
 					}
 				}
 			}
@@ -1038,13 +1155,16 @@ class Data
 			n_total_var += n_var;
 			ch++;
 		}
-		if(n_total_var != B.rows()){
+		if(n_total_var != B.rows() & !match_snpkeys){
 			std::cout << "ERROR: n var read in = " << n_total_var << std::endl;
 			std::cout << "ERROR: n coeffs read in = " << B.rows() << std::endl;
 			assert(n_total_var == B.rows());
 		}
 		if(n_constant_variance > 0){
 			std::cout << " Removed " << n_constant_variance  << " column(s) with zero variance:" << std::endl;
+		}
+		if(match_snpkeys){
+			std::cout << n_matched << " SNPs found matching those given in --coeffs" << std::endl;
 		}
 		Y = Xb + Zg + Xb2 + Zg2;
 	}
