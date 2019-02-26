@@ -1,6 +1,13 @@
 // Adapted from example/bgen_to_vcf.cpp by Gavin Band
 // From project at http://bitbucket.org/gavinband/bgen/get/master.tar.gz
 
+#include "parse_arguments.hpp"
+#include "parameters.hpp"
+#include "data.hpp"
+#include "genfile/bgen/bgen.hpp"
+#include "genfile/bgen/View.hpp"
+#include "version.h"
+
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/lexical_cast.hpp>
 #include <algorithm>
@@ -11,33 +18,7 @@
 #include <cstdlib>
 #include <stdexcept>
 #include <memory>
-#include "parse_arguments.hpp"
-#include "class.h"
-#include "data.hpp"
-#include "genfile/bgen/bgen.hpp"
-#include "genfile/bgen/View.hpp"
-#include "version.h"
 
-void read_directory(const std::string& name, std::vector<std::string>& v);
-
-// TODO: Sensible restructuring of interaction code
-// TODO: Use high precision double for pval
-// TODO: implement tests for info filter
-// TODO: tests for read_pheno, read_covar? Clarify if args for these are compulsory.
-// TODO: copy argument_sanity()
-
-// Efficiency changes:
-// 1) Use --range to edit query before reading bgen file
-// 2) Is there an option to skip sample ids?
-//    If so we could fill n_samples at start
-//    - read_covar() & read_pheno()
-//    - then edit query with incomplete cases before reading bgen
-
-// Notes:
-// - Replace missing data in BGEN files with mean
-
-// This example program reads data from a bgen file specified as the first argument
-// and outputs it as a VCF file.
 int main( int argc, char** argv ) {
 	parameters p;
 
@@ -128,11 +109,3 @@ int main( int argc, char** argv ) {
 }
 
 
-void read_directory(const std::string& name, std::vector<std::string>& v) {
-	DIR* dirp = opendir(name.c_str());
-	struct dirent * dp;
-	while ((dp = readdir(dirp)) != NULL) {
-		v.push_back(dp->d_name);
-	}
-	closedir(dirp);
-}

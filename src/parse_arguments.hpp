@@ -2,12 +2,13 @@
 #ifndef PARSE_ARGUMENTS_HPP
 #define PARSE_ARGUMENTS_HPP
 
+#include "parameters.hpp"
+#include "version.h"
+
 #include <iostream>
 #include <set>
 #include <cstring>
 #include <sys/stat.h>
-#include "class.h"
-#include "version.h"
 #include <regex>
 #include <stdexcept>
 

@@ -36,7 +36,7 @@ list(APPEND COMPILE_OPTS -DVERSION_MAJOR=${PROJECT_VERSION_MAJOR})
 list(APPEND COMPILE_OPTS -DVERSION_MINOR=${PROJECT_VERSION_MINOR})
 list(APPEND COMPILE_OPTS -DVERSION_PATCH=${PROJECT_VERSION_PATCH})
 
-set(SOURCES src/calc_sample_var.cpp)
+set(SOURCES src/data.cpp)
 set(BGEN_INCL_DIRS ${BGEN}/genfile/include ${BGEN}/3rd_party/zstd-1.1.0/lib ${BGEN}/db/include ${BGEN}/3rd_party/sqlite3 ${BGEN}/3rd_party/boost_1_55_0)
 
 ##Platform invariant variables
@@ -51,13 +51,13 @@ set(LIBS boost dl pthread boost_iostreams z ${LIBS})
 #set(TARGET bgen_prog)
 set(TARGET calc_sample_var)
 
-add_executable(${TARGET} ${SOURCES})
+add_executable(${TARGET} src/calc_sample_var.cpp ${SOURCES})
 target_include_directories(${TARGET} PRIVATE ${BGEN_INCL_DIRS})
 target_compile_options(${TARGET} PRIVATE ${COMPILE_OPTS})
 set_target_properties(${TARGET} PROPERTIES LINK_FLAGS "${LIB-DIRS}")
 target_link_libraries(${TARGET} ${BGEN_LIB} ${DB_LIB} ${SQLITE_LIB} ${ZSTD_LIB} ${LIBS} ${LINKER_OPTS})
 
-add_executable(${TARGET}_Xf ${SOURCES})
+add_executable(${TARGET}_Xf src/calc_sample_var.cpp ${SOURCES})
 target_include_directories(${TARGET}_Xf PRIVATE ${BGEN_INCL_DIRS})
 target_compile_options(${TARGET}_Xf PRIVATE -DDATA_AS_FLOAT ${COMPILE_OPTS})
 set_target_properties(${TARGET}_Xf PROPERTIES LINK_FLAGS "${LIB-DIRS}")
