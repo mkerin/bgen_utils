@@ -31,9 +31,9 @@
 
 template <typename EigenMat>
 EigenMat reduce_mat_to_complete_cases( EigenMat& M,
-									   bool& matrix_reduced,
-									   int n_cols,
-									   std::map< int, bool > incomplete_cases ) {
+                                       bool& matrix_reduced,
+                                       int n_cols,
+                                       std::map< int, bool > incomplete_cases ) {
 	// Remove rows contained in incomplete_cases
 	long nn = M.rows();
 	int n_incomplete;
@@ -103,7 +103,7 @@ inline scalarData var(const EigenDataArrayX& vv){
 void sim_gaussian_noise(EigenRefDataArrayX vv, const double& sigma_sq, std::mt19937& generator){
 	std::normal_distribution<scalarData> gaussian(0.0, std::sqrt(sigma_sq));
 	long nrows = vv.rows();
-	for (long ii = 0; ii < nrows; ii++){
+	for (long ii = 0; ii < nrows; ii++) {
 		vv(ii) = gaussian(generator);
 	}
 }
@@ -162,14 +162,14 @@ void Data::read_grid_file(const std::string &filename, EigenDataMatrix &M, std::
 				ss >> s;
 				try{
 					tmp_d = stod(s);
-				} catch (const std::invalid_argument &exc){
+				} catch (const std::invalid_argument &exc) {
 					std::cout << s << " on line " << i << std::endl;
 					throw;
 				}
 
 				M(i, k) = tmp_d;
 			}
-			i++; // loop should end at i == n_grid
+			i++;                                                                         // loop should end at i == n_grid
 		}
 		if (i < n_grid) {
 			throw std::runtime_error("ERROR: could not convert txt file (too few lines).");
@@ -180,15 +180,15 @@ void Data::read_grid_file(const std::string &filename, EigenDataMatrix &M, std::
 }
 
 void Data::read_txt_file_w_context(const std::string &filename, const int &col_offset, EigenDataMatrix &M,
-								   std::vector<std::string> &M_snpids, std::vector<std::string> &col_names) {
+                                   std::vector<std::string> &M_snpids, std::vector<std::string> &col_names) {
 	/*
-	Txt file where the first column is snp ids, then x-1 contextual,
-	then a matrix to be read into memory.
+	   Txt file where the first column is snp ids, then x-1 contextual,
+	   then a matrix to be read into memory.
 
-	Reads file twice to ascertain number of lines.
+	   Reads file twice to ascertain number of lines.
 
-	col_offset - how many contextual columns to skip
-	*/
+	   col_offset - how many contextual columns to skip
+	 */
 
 	// Reading from file
 	boost_io::filtering_istream fg;
@@ -205,7 +205,7 @@ void Data::read_txt_file_w_context(const std::string &filename, const int &col_o
 	// Read file twice to ascertain number of lines
 	int n_lines = 0;
 	std::string line;
-	getline(fg, line); // skip header
+	getline(fg, line);                         // skip header
 	while (getline(fg, line)) {
 		n_lines++;
 	}
@@ -242,20 +242,20 @@ void Data::read_txt_file_w_context(const std::string &filename, const int &col_o
 		for (int k = 0; k < n_cols; k++) {
 			std::string sss;
 			ss >> sss;
-			if (k == 0){
+			if (k == 0) {
 				M_snpids.push_back(sss);
 			}
-			if (k >= col_offset){
+			if (k >= col_offset) {
 				try{
 					M(i, k-col_offset) = stod(sss);
-				} catch (const std::invalid_argument &exc){
+				} catch (const std::invalid_argument &exc) {
 					std::cout << "Found value " << sss << " on line " << i;
 					std::cout << " of file " << filename << std::endl;
 					throw std::runtime_error("Unexpected value");
 				}
 			}
 		}
-		i++; // loop should end at i == n_samples
+		i++;                                                 // loop should end at i == n_samples
 	}
 	std::cout << n_lines << " rows found in " << filename << std::endl;
 }
@@ -316,7 +316,7 @@ void Data::scale_matrix(EigenDataMatrix &M, int &n_cols, std::vector<std::string
 		n_constant_variance += (n_cols - keep.size());
 		// std::cout << " Removing " << (n_cols - keep.size())  << " column(s) with zero variance:" << std::endl;
 		// for(int kk = 0; kk < (n_cols - keep.size()); kk++){
-		// 	std::cout << reject_names[kk] << std::endl;
+		//  std::cout << reject_names[kk] << std::endl;
 		// }
 //			M = getCols(M, keep);
 		for (std::size_t i = 0; i < keep.size(); i++) {
@@ -366,13 +366,13 @@ void Data::reduce_to_complete_cases() {
 	incomplete_cases.insert(missing_covars.begin(), missing_covars.end());
 	incomplete_cases.insert(missing_phenos.begin(), missing_phenos.end());
 	incomplete_cases.insert(missing_envs.begin(), missing_envs.end());
-	if(params.pheno_file != "NULL"){
+	if(params.pheno_file != "NULL") {
 		Y = reduce_mat_to_complete_cases( Y, Y_reduced, n_pheno, incomplete_cases );
 	}
-	if(params.covar_file != "NULL" || n_covar > 0){
+	if(params.covar_file != "NULL" || n_covar > 0) {
 		W = reduce_mat_to_complete_cases( W, W_reduced, n_covar, incomplete_cases );
 	}
-	if(params.env_file != "NULL" || n_env > 0){
+	if(params.env_file != "NULL" || n_env > 0) {
 		E = reduce_mat_to_complete_cases( E, E_reduced, n_env, incomplete_cases );
 	}
 	n_samples -= incomplete_cases.size();
@@ -389,7 +389,7 @@ void Data::calc_ssv() {
 
 	// Step 1; Read in raw covariates
 	// - also makes a record of missing values
-	if(params.covar_file != "NULL"){
+	if(params.covar_file != "NULL") {
 		read_covar();
 	}
 
@@ -399,7 +399,7 @@ void Data::calc_ssv() {
 	reduce_to_complete_cases();
 
 	// Step 3; Normalise covars
-	if(n_covar > 0){
+	if(n_covar > 0) {
 		center_matrix( W, n_covar );
 		scale_matrix( W, n_covar, covar_names );
 	}
@@ -416,14 +416,14 @@ void Data::calc_ssv() {
 		n_total_var += G.cols();
 
 		// Compute sum of column variances
-		for (int kk = 0; kk < n_var; kk++){
+		for (int kk = 0; kk < n_var; kk++) {
 			tmp_x = G.col(kk).dot(G.col(kk));
 			s_x += tmp_x / ((double) (n_samples - 1.0));
 
-			if(n_covar > 0){
+			if(n_covar > 0) {
 				mean_z = G.col(kk).dot(W.col(0)) / (double) n_samples;
 				tmp_z = 0.0;
-				for (std::size_t ii = 0; ii < n_samples; ii++){
+				for (std::size_t ii = 0; ii < n_samples; ii++) {
 					tmp_z += (W(ii,0)*G(ii,kk) - mean_z)*(W(ii,0)*G(ii,kk) - mean_z);
 				}
 				s_z += tmp_z / ((double) (n_samples - 1.0));
@@ -431,7 +431,7 @@ void Data::calc_ssv() {
 		}
 		ch++;
 	}
-	if(n_constant_variance > 0){
+	if(n_constant_variance > 0) {
 		std::cout << " Removed " << n_constant_variance  << " column(s) variance < 1e-12 or mac < 5:" << std::endl;
 	}
 }
@@ -442,18 +442,18 @@ void Data::pred_pheno() {
 
 	// Step 1; Read in raw covariates
 	// - also makes a record of missing values
-	if(params.covar_file != "NULL"){
+	if(params.covar_file != "NULL") {
 		read_covar();
 	}
-	if(params.env_file != "NULL"){
+	if(params.env_file != "NULL") {
 		read_environment();
 	}
 	read_coeffs();
-	if(params.coeffs2_file != "NULL"){
+	if(params.coeffs2_file != "NULL") {
 		read_coeffs2();
 	}
 
-	if(n_env > 1){
+	if(n_env > 1) {
 		std::cout << "WARNING: " << n_env << " cols detected in " << params.env_file << ". Just using first" << std::endl;
 		E = E.col(0);
 		n_env = 1;
@@ -466,11 +466,11 @@ void Data::pred_pheno() {
 	reduce_to_complete_cases();
 
 	// Step 3; Normalise covars
-	if(n_covar > 0 && !params.use_raw_covars){
+	if(n_covar > 0 && !params.use_raw_covars) {
 		center_matrix( W, n_covar );
 		scale_matrix( W, n_covar, covar_names );
 	}
-	if(n_env > 0 && !params.use_raw_env){
+	if(n_env > 0 && !params.use_raw_env) {
 		center_matrix( E, n_env );
 		scale_matrix( E, n_env, env_names );
 	}
@@ -484,7 +484,7 @@ void Data::pred_pheno() {
 	long n_matched = 0;
 	while (read_bgen_chunk()) {
 		// Raw dosage read in to G
-		if(ch % 10 == 0){
+		if(ch % 10 == 0) {
 			std::cout << "Chunk " << ch+1 << " read (size " << n_var;
 			std::cout << ", " << n_var_parsed-1 << "/" << bgenView->number_of_variants();
 			std::cout << " variants parsed)" << std::endl;
@@ -492,32 +492,43 @@ void Data::pred_pheno() {
 
 		assert(G.cols() == n_var);
 		assert(G.rows() == n_samples);
-		if(!match_snpkeys){
+		if(!(match_snpkeys || match_snpids)) {
 			assert(B.rows() >= n_total_var + n_var);
 		}
 
 		// Add effects to Y
 		long coeff_index = 0;
-		for (int kk = 0; kk < n_var; kk++){
-			auto it = B_SNPKEYS_map.find(SNPKEYS[kk]);
-			if(it != B_SNPKEYS_map.end()){
-				coeff_index = it->second;
-				n_matched++;
-			} else if (match_snpkeys){
-				continue;
+		for (int kk = 0; kk < n_var; kk++) {
+			if(match_snpkeys) {
+				auto it = B_SNPKEYS_map.find(SNPKEYS[kk]);
+				if (it != B_SNPKEYS_map.end()) {
+					coeff_index = it->second;
+					n_matched++;
+				} else {
+					continue;
+				}
+			} else if(match_snpids) {
+				auto it = B_SNPIDS_map.find(SNPID[kk]);
+				if (it != B_SNPIDS_map.end()) {
+					coeff_index = it->second;
+					n_matched++;
+				} else {
+					continue;
+				}
 			} else {
 				coeff_index = kk + n_total_var;
 			}
 
 			Xb += G.col(kk).array() * B(coeff_index, 0);
-			if(n_env > 0){
+			if(n_env > 0) {
 				Zg += G.col(kk).array() * E.array() * B(coeff_index, 1);
 			}
 
-			if(params.coeffs2_file != "NULL"){
-				assert(!match_snpkeys);  // Not yet implemented
+			if(params.coeffs2_file != "NULL") {
+				assert(!(match_snpkeys || match_snpids));
+				// Not yet implemented
 				Xb2 += G.col(kk).array() * B2(coeff_index, 0);
-				if(n_env > 0){
+				if(n_env > 0) {
 					Zg2 += G.col(kk).array() * E.array() * B2(coeff_index, 1);
 				}
 			}
@@ -527,15 +538,15 @@ void Data::pred_pheno() {
 		n_total_var += n_var;
 		ch++;
 	}
-	if(n_total_var != B.rows() & !match_snpkeys){
+	if(n_total_var != B.rows() & !(match_snpkeys || match_snpids)) {
 		std::cout << "ERROR: n var read in = " << n_total_var << std::endl;
 		std::cout << "ERROR: n coeffs read in = " << B.rows() << std::endl;
 		assert(n_total_var == B.rows());
 	}
-	if(n_constant_variance > 0){
+	if(n_constant_variance > 0) {
 		std::cout << " Removed " << n_constant_variance  << " column(s) with zero variance:" << std::endl;
 	}
-	if(match_snpkeys){
+	if(match_snpkeys || match_snpids) {
 		std::cout << n_matched << " SNPs found matching those given in --coeffs" << std::endl;
 	}
 	Y = Xb + Zg + Xb2 + Zg2;
@@ -549,7 +560,7 @@ void Data::gen_pheno() {
 	// Generate random effects
 	// http://itscompiling.eu/2016/04/11/generating-random-numbers-cpp/
 	// Random seed
-	if(params.random_seed == -1){
+	if(params.random_seed == -1) {
 		std::random_device rd;
 		params.random_seed = rd();
 	}
@@ -560,12 +571,12 @@ void Data::gen_pheno() {
 	double sigma_b, sigma_g = 0, sigma_b2, sigma_g2 = 0, sigma_c = 0, sigma_e = 0;
 	sigma_b = params.hb / (1.0 - params.hc - params.he - params.hb - params.hg - params.hb2 - params.hg2);
 	sigma_b2 = params.hb2 / (1.0 - params.hc - params.he - params.hb - params.hg - params.hb2 - params.hg2);
-	if(n_env > 0){
+	if(n_env > 0) {
 		sigma_g = params.hg / (1.0 - params.hc - params.he - params.hb - params.hg - params.hb2 - params.hg2);
 		sigma_g2 = params.hg2 / (1.0 - params.hc - params.he - params.hb - params.hg - params.hb2 - params.hg2);
 		sigma_e = params.he / (1.0 - params.hc - params.he - params.hb - params.hg - params.hb2 - params.hg2);
 	}
-	if(n_covar > 0){
+	if(n_covar > 0) {
 		sigma_c = params.hc / (1.0 - params.hc - params.he - params.hb - params.hg - params.hb2 - params.hg2);
 	}
 
@@ -575,7 +586,7 @@ void Data::gen_pheno() {
 	noise    *= std::sqrt(params.sigma / var(noise));
 
 	// additive covar effects
-	if(params.hc > 0){
+	if(params.hc > 0) {
 		EigenDataVector tau(n_covar);
 		sim_gaussian_noise(tau, 1, generator);
 		Wtau = W * tau;
@@ -586,7 +597,7 @@ void Data::gen_pheno() {
 	}
 
 	// additive env effects
-	if(params.he > 0){
+	if(params.he > 0) {
 		EigenDataVector alpha(n_env);
 		sim_gaussian_noise(alpha, 1, generator);
 		Ealpha = E * alpha;
@@ -601,18 +612,18 @@ void Data::gen_pheno() {
 	Xb       *= std::sqrt(params.sigma * sigma_b / var_xb);
 	B.col(0) *= std::sqrt(params.sigma * sigma_b / var_xb);
 
-	if(n_env > 0){
+	if(n_env > 0) {
 		scalarData var_zg = var(Zg);
 		Zg       *= std::sqrt(params.sigma * sigma_g / var_zg);
 		B.col(1) *= std::sqrt(params.sigma * sigma_g / var_zg);
 	}
 
-	if(params.coeffs2_file != "NULL"){
+	if(params.coeffs2_file != "NULL") {
 		scalarData var_xb = var(Xb2);
 		Xb2       *= std::sqrt(params.sigma * sigma_b2 / var_xb);
 		B2.col(0) *= std::sqrt(params.sigma * sigma_b2 / var_xb);
 
-		if(n_env > 0){
+		if(n_env > 0) {
 			scalarData var_zg = var(Zg2);
 			Zg2       *= std::sqrt(params.sigma * sigma_g2 / var_zg);
 			B2.col(1) *= std::sqrt(params.sigma * sigma_g2 / var_zg);
@@ -634,17 +645,17 @@ void Data::gen2_pheno() {
 	// Controlling heritability of generated phenotype with variance of
 	// noise subsequently added, a la BSLMM.
 
-	if(params.covar_file != "NULL"){
+	if(params.covar_file != "NULL") {
 		read_covar();
 	}
-	if(params.env_file != "NULL"){
+	if(params.env_file != "NULL") {
 		read_environment();
 	} else {
 		E = W;
 		n_env = n_covar;
 		env_names = covar_names;
 	}
-	if(n_env > 1){
+	if(n_env > 1) {
 		std::cout << "WARNING: " << n_env << " cols detected in " << params.env_file << ". Just using first" << std::endl;
 		E = E.col(0);
 		n_env = 1;
@@ -658,11 +669,11 @@ void Data::gen2_pheno() {
 	reduce_to_complete_cases();
 
 	// Step 3; Normalise covars
-	if(n_covar > 0 && !params.use_raw_covars){
+	if(n_covar > 0 && !params.use_raw_covars) {
 		center_matrix( W, n_covar );
 		scale_matrix( W, n_covar, covar_names );
 	}
-	if(n_env > 0 && !params.use_raw_env){
+	if(n_env > 0 && !params.use_raw_env) {
 		center_matrix( E, n_env );
 		scale_matrix( E, n_env, env_names );
 	}
@@ -673,7 +684,7 @@ void Data::gen2_pheno() {
 	int ch = 0;
 	while (read_bgen_chunk()) {
 		// Raw dosage read in to G
-		if(ch % 10 == 0){
+		if(ch % 10 == 0) {
 			std::cout << "Chunk " << ch+1 << " read (size " << n_var;
 			std::cout << ", " << n_var_parsed-1 << "/" << bgenView->number_of_variants();
 			std::cout << " variants parsed)" << std::endl;
@@ -681,7 +692,7 @@ void Data::gen2_pheno() {
 		assert(n_var == G.cols());
 
 		// Add effects to Y
-		for (int kk = 0; kk < n_var; kk++){
+		for (int kk = 0; kk < n_var; kk++) {
 			Xb += G.col(kk).array() * B(kk + n_total_var, 0);
 			Zg += G.col(kk).array() * E.array() * B(kk + n_total_var, 1);
 		}
@@ -689,16 +700,16 @@ void Data::gen2_pheno() {
 		n_total_var += n_var;
 		ch++;
 	}
-	if(n_total_var != B.rows()){
+	if(n_total_var != B.rows()) {
 		std::cout << "ERROR: n var read in = " << n_total_var << std::endl;
 		std::cout << "ERROR: n coeffs read in = " << B.rows() << std::endl;
 		assert(n_total_var == B.rows());
 	}
-	if(n_constant_variance > 0){
+	if(n_constant_variance > 0) {
 		std::cout << " Removed " << n_constant_variance  << " column(s) with zero variance:" << std::endl;
 	}
 
-	if(params.sim_w_noise){
+	if(params.sim_w_noise) {
 		// Generate noise
 		double var_xb = (Xb - Xb.mean()).square().sum() / ((double) n_samples - 1.0);
 		double var_zg = (Zg - Zg.mean()).square().sum() / ((double) n_samples - 1.0);
@@ -715,14 +726,14 @@ void Data::gen2_pheno() {
 		std::normal_distribution<scalarData> standard_normal(0.0, std::sqrt(sigma));
 		std::cout << "Adding white noise with variance: " << sigma << std::endl;
 		noise.resize(n_samples);
-		for (std::size_t ii = 0; ii < n_samples; ii++){
+		for (std::size_t ii = 0; ii < n_samples; ii++) {
 			noise(ii) = standard_normal(generator);
 		}
 
 		double var_noise = (noise - noise.mean()).square().sum() / ((double) n_samples - 1.0);
 		noise *= std::sqrt(sigma / var_noise);
 
-		if(params.covar_file == "NULL"){
+		if(params.covar_file == "NULL") {
 			Y = Xb + Zg + noise;
 		} else {
 			Y = W.rowwise().sum().array() + Xb + Zg + noise;
@@ -734,10 +745,10 @@ void Data::compute_correlations_chunk(EigenRefDataArrayXX dXtEEX_chunk) {
 	assert(dXtEEX_chunk.rows() == n_var);
 	assert(dXtEEX_chunk.cols() == n_env * n_env);
 	EigenDataArrayX cl_j;
-	for (int jj = 0; jj < n_var; jj++){
+	for (int jj = 0; jj < n_var; jj++) {
 		cl_j = G.col(jj);
-		for (int ll = 0; ll < n_env; ll++){
-			for (int mm = 0; mm <= ll; mm++){
+		for (int ll = 0; ll < n_env; ll++) {
+			for (int mm = 0; mm <= ll; mm++) {
 				double x = (cl_j * E.array().col(ll) * E.array().col(mm) * cl_j).sum();
 				dXtEEX_chunk(jj, ll*n_env + mm) = x;
 				dXtEEX_chunk(jj, mm*n_env + ll) = x;
@@ -749,7 +760,7 @@ void Data::compute_correlations_chunk(EigenRefDataArrayXX dXtEEX_chunk) {
 void Data::print_keys() {
 	// Step 4; compute correlations
 	int ch = 0;
-	reduce_to_complete_cases(); // From read_sids!!
+	reduce_to_complete_cases();                         // From read_sids!!
 	// std::cout << "num samples: " << n_samples << std::endl;
 	while (read_bgen_chunk()) {
 		// Raw dosage read in to G
@@ -757,7 +768,7 @@ void Data::print_keys() {
 		std::cout << ", " << n_var_parsed-1 << "/" << bgenView->number_of_variants();
 		std::cout << " variants parsed)" << std::endl;
 
-		for (std::size_t ii = 0; ii < n_var; ii++){
+		for (std::size_t ii = 0; ii < n_var; ii++) {
 			outf << chromosome[ii] << " " << rsid[ii] << " " << position[ii];
 			outf << " " << alleles[ii][0] << " " << alleles[ii][1];
 			outf << " " << maf[ii] << " " << info[ii] << std::endl;
@@ -767,7 +778,7 @@ void Data::print_keys() {
 		ch++;
 	}
 
-	if(n_constant_variance > 0){
+	if(n_constant_variance > 0) {
 		std::cout << " Removed " << n_constant_variance  << " column(s) with zero variance:" << std::endl;
 	}
 }
@@ -779,7 +790,7 @@ void Data::compute_correlations() {
 	// Step 1; Read in raw covariates
 	// - also makes a record of missing values
 	read_environment();
-	if(params.covar_file != "NULL"){
+	if(params.covar_file != "NULL") {
 		read_covar();
 	}
 
@@ -796,7 +807,7 @@ void Data::compute_correlations() {
 		center_matrix(W, n_covar);
 		scale_matrix(W, n_covar, covar_names);
 	}
-	if(n_covar > 0){
+	if(n_covar > 0) {
 		regress_first_mat_from_second(W, "covars", covar_names, E, "env");
 	}
 
@@ -818,21 +829,21 @@ void Data::compute_correlations() {
 		ch++;
 	}
 
-	if(n_constant_variance > 0){
+	if(n_constant_variance > 0) {
 		std::cout << " Removed " << n_constant_variance  << " column(s) with zero variance:" << std::endl;
 	}
 }
 
 void Data::regress_first_mat_from_second(const EigenDataMatrix &A, const std::string &Astring,
-										 const std::vector<std::string> &A_names, EigenDataMatrix &yy,
-										 const std::string &yy_string) {
+                                         const std::vector<std::string> &A_names, EigenDataMatrix &yy,
+                                         const std::string &yy_string) {
 	//
 	std::cout << "Regressing " << Astring << " from " << yy_string << ":" << std::endl;
 	unsigned long nnn = A_names.size();
-	for(int cc = 0; cc < std::min(nnn, (unsigned long) 10); cc++){
+	for(int cc = 0; cc < std::min(nnn, (unsigned long) 10); cc++) {
 		std::cout << ( cc > 0 ? ", " : "" ) << A_names[cc];
 	}
-	if (nnn > 10){
+	if (nnn > 10) {
 		std::cout << "... (" << nnn << " variables)";
 	}
 	std::cout << std::endl;

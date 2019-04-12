@@ -21,14 +21,14 @@ inline double sigmoid(double x){
 inline std::string gen_snpkey(std::string chr, uint32_t pos,
                               std::vector< std::string > alleles){
 	std::string key = chr;
- 	key += "~" + std::to_string(pos);
- 	key += "~" + alleles[0];
- 	key += "~" + alleles[1];
+	key += "~" + std::to_string(pos);
+	key += "~" + alleles[0];
+	key += "~" + alleles[1];
 	return key;
 }
 
 inline void read_file_header(const std::string& filename,
-							 std::vector<std::string>& col_names){
+                             std::vector<std::string>& col_names){
 
 	// Get colnames from file
 	boost_io::filtering_istream fg;
