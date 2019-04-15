@@ -17,6 +17,7 @@
 #include <iostream>
 #include <algorithm>
 #include <cmath>
+#include <chrono>
 #include <cstddef>     // for ptrdiff_t class
 #include <map>
 #include <vector>
@@ -137,7 +138,7 @@ Data( const parameters& my_params ) : params(my_params){
 	n_covar = 0;
 	n_env = 0;
 
-	match_snpkeys = false;              // Used when reconstructing yhat from coeffs
+	match_snpkeys = false;                  // Used when reconstructing yhat from coeffs
 
 	// system time at start
 	start = std::chrono::system_clock::now();
@@ -296,7 +297,7 @@ bool read_bgen_chunk() {
 	uint32_t pos_j;
 	std::string rsid_j;
 	std::vector< std::string > alleles_j;
-	std::string SNPID_j;              // read but ignored
+	std::string SNPID_j;                  // read but ignored
 	std::vector< std::vector< double > > probs;
 	ProbSetter setter( &probs );
 
@@ -623,7 +624,7 @@ void read_txt_file( std::string filename,
 					incomplete_row[i] = 1;
 				}
 			}
-			i++;                     // loop should end at i == n_samples
+			i++;                                 // loop should end at i == n_samples
 		}
 		if (i < n_samples) {
 			throw std::runtime_error("ERROR: could not convert txt file (too few lines).");
