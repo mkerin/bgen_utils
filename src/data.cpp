@@ -169,7 +169,7 @@ void Data::read_grid_file(const std::string &filename, EigenDataMatrix &M, std::
 
 				M(i, k) = tmp_d;
 			}
-			i++;                                                                         // loop should end at i == n_grid
+			i++;                                                                                     // loop should end at i == n_grid
 		}
 		if (i < n_grid) {
 			throw std::runtime_error("ERROR: could not convert txt file (too few lines).");
@@ -205,7 +205,7 @@ void Data::read_txt_file_w_context(const std::string &filename, const int &col_o
 	// Read file twice to ascertain number of lines
 	int n_lines = 0;
 	std::string line;
-	getline(fg, line);                         // skip header
+	getline(fg, line);                             // skip header
 	while (getline(fg, line)) {
 		n_lines++;
 	}
@@ -255,7 +255,7 @@ void Data::read_txt_file_w_context(const std::string &filename, const int &col_o
 				}
 			}
 		}
-		i++;                                                 // loop should end at i == n_samples
+		i++;                                                         // loop should end at i == n_samples
 	}
 	std::cout << n_lines << " rows found in " << filename << std::endl;
 }
@@ -760,7 +760,7 @@ void Data::compute_correlations_chunk(EigenRefDataArrayXX dXtEEX_chunk) {
 void Data::print_keys() {
 	// Step 4; compute correlations
 	int ch = 0;
-	reduce_to_complete_cases();                         // From read_sids!!
+	reduce_to_complete_cases();                             // From read_sids!!
 	// std::cout << "num samples: " << n_samples << std::endl;
 	while (read_bgen_chunk()) {
 		// Raw dosage read in to G
@@ -769,7 +769,8 @@ void Data::print_keys() {
 		std::cout << " variants parsed)" << std::endl;
 
 		for (std::size_t ii = 0; ii < n_var; ii++) {
-			outf << chromosome[ii] << " " << rsid[ii] << " " << position[ii];
+			outf << SNPID[ii] << " " << chromosome[ii] << " " << rsid[ii];
+			outf << " " << position[ii];
 			outf << " " << alleles[ii][0] << " " << alleles[ii][1];
 			outf << " " << maf[ii] << " " << info[ii] << std::endl;
 		}
