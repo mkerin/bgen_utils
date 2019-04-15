@@ -770,7 +770,8 @@ void Data::print_keys() {
 		std::cout << " variants parsed)" << std::endl;
 
 		for (std::size_t ii = 0; ii < n_var; ii++) {
-			outf << chromosome[ii] << " " << rsid[ii] << " " << position[ii];
+			outf << SNPID[ii] << " " << chromosome[ii] << " " << rsid[ii];
+			outf << " " << position[ii];
 			outf << " " << alleles[ii][0] << " " << alleles[ii][1];
 			outf << " " << maf[ii] << " " << info[ii] << std::endl;
 		}

@@ -216,7 +216,7 @@ void output_init() {
 		std::cout << "Writing snp-environment correlations to " << ofile << std::endl;
 	} else if (params.mode_print_keys) {
 		std::cout << "Writing snp-keys to " << ofile << std::endl;
-		outf << "chr rsid pos a0 a1 maf info" << std::endl;
+		outf << "SNPID chr rsid pos a0 a1 maf info" << std::endl;
 	}
 }
 
