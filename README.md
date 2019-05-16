@@ -1,6 +1,6 @@
 # bgen_utils
 
-Programme to allow basic simulation of phenotypes with a heritabile component from `bgen` file format. 
+Programme to allow basic simulation of phenotypes with a heritable component from `bgen` file format. Available for beta testing.
 
 Dependencies:
 - installed version of the BGEN library
@@ -19,12 +19,18 @@ cmake --build bin -- -j 4
 
 Basic usage:
 ```
-cmake-build-debug/bgen_utils --sim_pheno \
+bin/bgen_utils --sim_pheno \
 --bgen unit/data/n50_p100.bgen \
 --coeffs unit/data/coeffs_w_snpkey.txt \
 --out tmp.txt
 ```
 
+Here we simulate
+```
+Y = X \beta + \epsilon
+```
+where columns of the dosage matrix X are normalised to have mean zero and variance one.
+
 There are two possible formats allowed for the text file given to --coeffs.
 1. Txt file with header "beta" and M rows below each containing a coefficient, where M is the number of SNPs in the file passed to --bgen.
-2. Txt file with header "SNPID beta". Any number of rows are allowed, and SNPs whose SNPid matches that given in the --coeffs file will use the corresponding coefficient (and zero effect otherwise).
+2. Txt file with header "SNPID beta". Any number of rows are allowed, and SNPs whose SNPID matches that given in the --coeffs file will use the corresponding coefficient (and zero effect otherwise).
