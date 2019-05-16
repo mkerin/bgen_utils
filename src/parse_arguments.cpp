@@ -40,10 +40,10 @@ void parse_arguments(parameters &p, int argc, char **argv) {
 			 cxxopts::value<std::string>(p.excl_rsids_file))
 			("range", "Genomic range in format chr:start-end",
 			 cxxopts::value<std::string>())
-			("maf", "Exclude SNPs with allele frequency less than <maf> or greater than (1 - <maf>)",
-			 cxxopts::value<double>())
-			("info", "Exclude SNPs with IMPUTE info score less than <info>",
-			 cxxopts::value<double>())
+//			("maf", "Exclude SNPs with allele frequency less than <maf> or greater than (1 - <maf>)",
+//			 cxxopts::value<double>())
+//			("info", "Exclude SNPs with IMPUTE info score less than <info>",
+//			 cxxopts::value<double>())
 			("mode_pred_pheno", "Path to file of coefficients", cxxopts::value<bool>(p.mode_pred_pheno))
 			("mode_gen_pheno", "Path to file of coefficients", cxxopts::value<bool>(p.mode_gen_pheno))
 			("random_seed", "Seed used when simulating a phenotype (random if not given)",
