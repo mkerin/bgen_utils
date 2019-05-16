@@ -1,0 +1,46 @@
+# Ignore the build and lib dirs
+build/*
+lib/*
+3rd_party/*
+archive/*
+src/tools/*
+data/*
+tests/data/*
+
+cmake-build*
+CMakeFiles/*
+traces/*
+instruments*
+examples/*
+tests/*.bak
+tests/*.backup
+
+# Ignore any executables
+bin/*
+
+# garbage files
+*.gch
+Makefile
+.idea/*
+.DS_Store*
+.Rproj.user
+.Rhistory
+*.Rpoj
+.DS_Store
+.idea/*
+latest_compile_branch.txt
+Cmakefiles/*
+Makefile
+
+# tests/ executables
+tests/tests-main.o
+tests/tests-main
+tests/tests
+
+examples/test_code
+examples/test_gaussian
+examples/test_genotype_mat
+examples/test_updates
+examples/test_updates_constants_out_of_loop
+examples/test_updates_internal_dot
+examples/test_mkl_Xtv
