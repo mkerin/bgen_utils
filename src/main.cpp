@@ -6,7 +6,6 @@
 #include "data.hpp"
 #include "genfile/bgen/bgen.hpp"
 #include "genfile/bgen/View.hpp"
-#include "version.h"
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/lexical_cast.hpp>
@@ -23,7 +22,7 @@ int main( int argc, char** argv ) {
 	parameters p;
 
 	std::cout << "=================="<< std::endl;
-	std::cout << "LEMMA utils v" << VERSION_MAJOR << "." << VERSION_MINOR << "." << VERSION_PATCH << std::endl;
+	std::cout << "bgen_utils v" << VERSION_MAJOR << "." << VERSION_MINOR << "." << VERSION_PATCH << std::endl;
 	std::cout << "==================" << std::endl << std::endl;
 
 	try {
@@ -80,7 +79,8 @@ int main( int argc, char** argv ) {
 		} else if(p.mode_gen_pheno) {
 			data.gen_pheno();
 		} else if(p.mode_gen2_pheno) {
-			data.gen2_pheno();
+			// Depreciated
+			// data.gen2_pheno();
 		} else if(p.mode_compute_correlations){
 			data.compute_correlations();
 		} else if(p.mode_print_keys){

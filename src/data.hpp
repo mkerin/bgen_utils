@@ -84,8 +84,7 @@ std::map<int, bool> missing_phenos;         // set of subjects missing >= phenot
 std::map<int, bool> missing_envs;         // set of subjects missing >= phenotype
 std::map< int, bool > incomplete_cases;         // union of samples missing data
 
-std::vector< std::string > pheno_names;
-std::vector< std::string > covar_names;
+	std::vector< std::string > covar_names;
 std::vector< std::string > env_names;
 
 EigenDataMatrix G;         // probabilistic genotype matrix
@@ -143,7 +142,6 @@ Data( const parameters& my_params ) : params(my_params){
 	start = std::chrono::system_clock::now();
 	std::time_t start_time = std::chrono::system_clock::to_time_t(start);
 	std::cout << "Starting analysis at " << std::ctime(&start_time) << std::endl;
-	std::cout << "Compiled from git branch: master" << std::endl;
 }
 
 ~Data() {
@@ -670,32 +668,41 @@ void read_coeffs(){
 	std::vector<std::string> case2 = {"SNPKEY", "beta", "gamma"};
 	std::vector<std::string> case3 = {"SNPID", "beta", "gamma"};
 
+	std::vector<std::string> case1b = {"beta"};
+	std::vector<std::string> case2b = {"SNPKEY", "beta"};
+	std::vector<std::string> case3b = {"SNPID", "beta"};
+
 	std::vector<std::string> coeff_names;
 	read_file_header(params.coeffs_file, coeff_names);
 
-	if(coeff_names == case1) {
+	if(coeff_names == case1 || coeff_names == case1b) {
 		read_grid_file(params.coeffs_file, B, coeff_names);
-	} else if (coeff_names == case2) {
+
+		if (coeff_names == case1) assert(B.cols() == 2);
+		if (coeff_names == case1b) assert(B.cols() == 1);
+	} else if (coeff_names == case2 || coeff_names == case2b) {
+		match_snpkeys = true;
 		read_txt_file_w_context(params.coeffs_file, 1, B, B_SNPKEYS,
 		                        coeff_names);
-		match_snpkeys = true;
 		for (long jj = 0; jj < B_SNPKEYS.size(); jj++) {
 			B_SNPKEYS_map[B_SNPKEYS[jj]] = jj;
 		}
-	} else if (coeff_names == case3) {
-		read_txt_file_w_context(params.coeffs_file, 1, B, B_SNPIDS,
-		                        coeff_names);
+
+		if (coeff_names == case2) assert(B.cols() == 2);
+		if (coeff_names == case2b) assert(B.cols() == 1);
+	} else if (coeff_names == case3 || coeff_names == case3b) {
 		match_snpids = true;
+		read_txt_file_w_context(params.coeffs_file, 1, B, B_SNPIDS,
+								coeff_names);
 		for (long jj = 0; jj < B_SNPIDS.size(); jj++) {
 			B_SNPIDS_map[B_SNPIDS[jj]] = jj;
 		}
+
+		if (coeff_names == case3) assert(B.cols() == 2);
+		if (coeff_names == case3b) assert(B.cols() == 1);
 	} else {
 		throw std::logic_error("Unexpected header in --coeffs");
 	}
-
-	assert(B.cols() == 2);
-	std::cout << B.rows() << " coefficients read in from ";
-	std::cout << params.coeffs_file << std::endl;
 }
 
 void read_coeffs2( ){
@@ -734,7 +741,7 @@ void pred_pheno();
 
 void gen_pheno();
 
-void gen2_pheno();
+//void gen2_pheno();
 
 void compute_correlations();
 

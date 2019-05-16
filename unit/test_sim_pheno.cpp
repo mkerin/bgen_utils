@@ -18,7 +18,7 @@
 TEST_CASE("parse commandline"){
 	parameters p;
 	char* argv[] = { (char*) "bin/bgen_utils",
-		             (char*) "--mode_gen_pheno",
+		             (char*) "--sim_pheno",
 		             (char*) "--incl_sample_ids", (char*) "unit/data/sample_ids.txt",
 		             (char*) "--coeffs", (char*) "unit/data/sample_ids.txt",
 		             (char*) "--range", (char*) "12:13-14",
@@ -48,9 +48,9 @@ TEST_CASE("sim_phenotype"){
 
 	Data data(p);
 	data.gen_pheno();
-	CHECK(data.Y(0) == Approx(-1.4454847077));
-	CHECK(data.Y(1) == Approx(-0.5664446173));
-	CHECK(data.Y(2) == Approx(-1.0768929511));
-	CHECK(data.Y(3) == Approx(1.6308280995));
-	CHECK(data.Y(4) == Approx(-2.0189108167));
+	CHECK(data.Y(0) == Approx(-1.508216515));
+	CHECK(data.Y(1) == Approx(-0.6373672634));
+	CHECK(data.Y(2) == Approx(-1.0795088689));
+	CHECK(data.Y(3) == Approx(1.5720520434));
+	CHECK(data.Y(4) == Approx(-2.1022111011));
 }

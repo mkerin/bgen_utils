@@ -8,7 +8,7 @@
 
 class parameters {
 	public :
-		std::string bgen_file, bgi_file, pheno_file, out_file, covar_file, incl_rsids_file, incl_sids_file;
+		std::string bgen_file, bgi_file, out_file, covar_file, incl_rsids_file, incl_sids_file;
 		std::string excl_rsids_file, coeffs_file, coeffs2_file, chr, env_file, env_profile_file;
 		std::vector< std::string > rsid;
 		int chunk_size, missing_code;
@@ -23,7 +23,6 @@ class parameters {
 	// constructors/destructors
 	parameters() {
 		bgen_file = "NULL";
-		pheno_file = "NULL";
 		bgi_file = "NULL";
 		env_file = "NULL";
 		covar_file = "NULL";
@@ -51,7 +50,7 @@ class parameters {
 		select_rsid = false;
 		keep_constant_variants = false;
 		rescale_coeffs = false;
-		sim_w_noise = false;
+		sim_w_noise = true;
 		mode_low_mem = false;
 		use_raw_covars = false;
 		use_raw_env = false;

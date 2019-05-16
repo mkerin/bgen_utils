@@ -16,7 +16,7 @@ void check_file_exists(const std::string &filename) {
 	// Throw error if given file does not exist.
 	// NB: Doesn't check if file is empty etc.
 	struct stat buf;
-	if(stat(filename.c_str(), &buf) != 0){
+	if(stat(filename.c_str(), &buf) != 0) {
 		std::cout << "File " << filename << " does not exist" << std::endl;
 		throw std::runtime_error("ERROR: file does not exist");
 	}
@@ -25,94 +25,113 @@ void check_file_exists(const std::string &filename) {
 void parse_arguments(parameters &p, int argc, char **argv) {
 
 	cxxopts::Options options("bgen utils", "Utility programme for interacting with bgen files. "
-										   "Includes functionality such as predicting phenotypes "
-										   "given a file of coefficients and simulating phenotypes (ie with added noise).");
+	                         "Includes functionality such as predicting phenotypes "
+	                         "given a file of coefficients and simulating phenotypes (ie with added noise).");
 
 	options.add_options()
-			("bgen", "Path to bgen file", cxxopts::value<std::string>(p.bgen_file))
-			("coeffs", "Path to file of coefficients", cxxopts::value<std::string>(p.coeffs_file))
-			("out", "Filepath to output", cxxopts::value<std::string>(p.out_file))
-			("incl_sample_ids", "Text file of sample ids to include (no header, 1 per line)",
-			 cxxopts::value<std::string>(p.incl_sids_file))
-			("incl_rsids", "Text file of rsids to include (no header, 1 per line)",
-			 cxxopts::value<std::string>(p.incl_rsids_file))
-			("excl_rsids", "Text file of rsids to exclude (no header, 1 per line)",
-			 cxxopts::value<std::string>(p.excl_rsids_file))
-			("range", "Genomic range in format chr:start-end",
-			 cxxopts::value<std::string>())
+	    ("sim_pheno", "Simulate phenotype of form Y = X beta + epsilon", cxxopts::value<bool>(p.mode_gen_pheno))
+	    ("pred_pheno", "Predict phenotype Y = X beta", cxxopts::value<bool>(p.mode_pred_pheno))
+	    ("bgen", "Path to bgen file", cxxopts::value<std::string>(p.bgen_file))
+	    ("coeffs", "Path to file of coefficients", cxxopts::value<std::string>(p.coeffs_file))
+	    ("out", "Filepath to output", cxxopts::value<std::string>(p.out_file))
+	    ("incl_sample_ids", "Text file of sample ids to include (no header, 1 per line)",
+	    cxxopts::value<std::string>(p.incl_sids_file))
+	    ("incl_rsids", "Text file of rsids to include (no header, 1 per line)",
+	    cxxopts::value<std::string>(p.incl_rsids_file))
+	    ("excl_rsids", "Text file of rsids to exclude (no header, 1 per line)",
+	    cxxopts::value<std::string>(p.excl_rsids_file))
+	    ("range", "Genomic range in format chr:start-end",
+	    cxxopts::value<std::string>())
 //			("maf", "Exclude SNPs with allele frequency less than <maf> or greater than (1 - <maf>)",
 //			 cxxopts::value<double>())
 //			("info", "Exclude SNPs with IMPUTE info score less than <info>",
 //			 cxxopts::value<double>())
-			("mode_pred_pheno", "Path to file of coefficients", cxxopts::value<bool>(p.mode_pred_pheno))
-			("mode_gen_pheno", "Path to file of coefficients", cxxopts::value<bool>(p.mode_gen_pheno))
-			("random_seed", "Seed used when simulating a phenotype (random if not given)",
-			 cxxopts::value<unsigned int>(p.random_seed))
-			;
+	    ("random_seed", "Seed used when simulating a phenotype (default: random)",
+	    cxxopts::value<unsigned int>(p.random_seed))
+	    ("true_sigma", "Variance of gaussian noise added to simulated phenotype (default: 1). Must be greater than zero.",
+	    cxxopts::value<double>(p.sigma))
+	    ("h, help", "")
+	;
 
-	auto opts = options.parse(argc, argv);
+	try{
+		auto opts = options.parse(argc, argv);
+		auto args = opts.arguments();
 
-	if(p.bgen_file != "NULL") {
-		p.bgi_file = p.bgen_file + ".bgi";
-		check_file_exists(p.bgen_file);
-		check_file_exists(p.bgi_file);
-	}
+		if (opts.count("help") || args.empty()) {
+			std::cout << options.help({""}) << std::endl;
+			std::exit(0);
+		}
 
-	if(p.coeffs_file != "NULL") {
-		check_file_exists(p.coeffs_file);
-	}
+		if(p.bgen_file != "NULL") {
+			p.bgi_file = p.bgen_file + ".bgi";
+			check_file_exists(p.bgen_file);
+			check_file_exists(p.bgi_file);
+		}
 
-	if(p.incl_sids_file != "NULL") {
-		check_file_exists(p.incl_sids_file);
-	}
+		if(p.coeffs_file != "NULL") {
+			check_file_exists(p.coeffs_file);
+		}
 
-	if(p.incl_rsids_file != "NULL") {
-		check_file_exists(p.incl_rsids_file);
-	}
+		if(p.incl_sids_file != "NULL") {
+			check_file_exists(p.incl_sids_file);
+		}
 
-	if(p.excl_rsids_file != "NULL") {
-		check_file_exists(p.excl_rsids_file);
-	}
+		if(p.incl_rsids_file != "NULL") {
+			check_file_exists(p.incl_rsids_file);
+		}
 
-	if(opts.count("maf")){
-		p.maf_lim = true;
-		p.min_maf = opts["maf"].as<double>();
-	}
+		if(p.excl_rsids_file != "NULL") {
+			check_file_exists(p.excl_rsids_file);
+		}
 
-	if(opts.count("info")){
-		p.info_lim = true;
-		p.min_info = opts["info"].as<double>();
-	}
+		if(opts.count("maf")) {
+			p.maf_lim = true;
+			p.min_maf = opts["maf"].as<double>();
+		}
 
-	if(opts.count("range")) {
-		auto ss = opts["range"].as<std::string>();
-		p.range = true;
-		p.chr = ss.substr(0, ss.find(':'));
-		p.start = std::atoi(ss.substr(ss.find(':')+1, ss.find('-')).c_str());
-		p.end = std::atoi(ss.substr(ss.find('-')+1, ss.size()).c_str());
+		if(opts.count("info")) {
+			p.info_lim = true;
+			p.min_info = opts["info"].as<double>();
+		}
+
+		if(opts.count("range")) {
+			auto ss = opts["range"].as<std::string>();
+			p.range = true;
+			p.chr = ss.substr(0, ss.find(':'));
+			p.start = std::atoi(ss.substr(ss.find(':')+1, ss.find('-')).c_str());
+			p.end = std::atoi(ss.substr(ss.find('-')+1, ss.size()).c_str());
+		}
+
+		if(opts.count("true_sigma")) {
+			assert(p.sigma > 0);
+		}
+
+	} catch (const cxxopts::OptionException& e) {
+		std::cout << "error parsing options: " << e.what() << std::endl;
+		std::exit(1);
 	}
 
 	// Sanity checks here
-	if(p.mode_gen_pheno){
-		if(p.out_file == "NULL"){
+	if(p.mode_gen_pheno) {
+		if(p.out_file == "NULL") {
 			throw std::runtime_error("Output file must be provided in gen pheno mode");
 		}
-		if(p.bgen_file == "NULL"){
+		if(p.bgen_file == "NULL") {
 			throw std::runtime_error("bgen file of coefficients must be provided in gen pheno mode");
 		}
-		if(p.coeffs_file == "NULL"){
+		if(p.coeffs_file == "NULL") {
 			throw std::runtime_error("File of coefficients must be provided in gen pheno mode");
 		}
 	}
 
-	if(p.mode_pred_pheno){
-		if(p.out_file == "NULL"){
+	if(p.mode_pred_pheno) {
+		if(p.out_file == "NULL") {
 			throw std::runtime_error("Output file must be provided in pred pheno mode");
 		}
-		if(p.bgen_file == "NULL"){
+		if(p.bgen_file == "NULL") {
 			throw std::runtime_error("bgen file of coefficients must be provided in pred pheno mode");
 		}
-		if(p.coeffs_file == "NULL"){
+		if(p.coeffs_file == "NULL") {
 			throw std::runtime_error("File of coefficients must be provided in pred pheno mode");
 		}
 	}
@@ -131,7 +150,6 @@ void parse_arguments(parameters &p, int argc, char **argv) {
 //		"--mode_ssv",
 //		"--mode_gen2_pheno",
 //		"--coeffs2",
-//		"--true_sigma",
 //		"--true_hb",
 //		"--true_hg",
 //		"--true_hb2",
@@ -201,12 +219,6 @@ void parse_arguments(parameters &p, int argc, char **argv) {
 //				i += 1;
 //			}
 //
-//			if(in_str1 == "--true_sigma") {
-//				check_counts(in_str, i, 1, argc);
-//				p.sigma = std::stod(argv[i + 1]);
-//				p.sim_w_noise = true;
-//				i += 1;
-//			}
 //
 //			if(in_str1 == "--true_hb") {
 //				check_counts(in_str, i, 1, argc);

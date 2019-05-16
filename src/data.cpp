@@ -169,7 +169,7 @@ void Data::read_grid_file(const std::string &filename, EigenDataMatrix &M, std::
 
 				M(i, k) = tmp_d;
 			}
-			i++;                                                                                     // loop should end at i == n_grid
+			i++;                                                                                                                         // loop should end at i == n_grid
 		}
 		if (i < n_grid) {
 			throw std::runtime_error("ERROR: could not convert txt file (too few lines).");
@@ -205,7 +205,7 @@ void Data::read_txt_file_w_context(const std::string &filename, const int &col_o
 	// Read file twice to ascertain number of lines
 	int n_lines = 0;
 	std::string line;
-	getline(fg, line);                             // skip header
+	getline(fg, line);                                         // skip header
 	while (getline(fg, line)) {
 		n_lines++;
 	}
@@ -255,7 +255,7 @@ void Data::read_txt_file_w_context(const std::string &filename, const int &col_o
 				}
 			}
 		}
-		i++;                                                         // loop should end at i == n_samples
+		i++;                                                                                 // loop should end at i == n_samples
 	}
 	std::cout << n_lines << " rows found in " << filename << std::endl;
 }
@@ -364,11 +364,7 @@ void Data::reduce_to_complete_cases() {
 	// Note; during unit testing sometimes only phenos or covars present.
 
 	incomplete_cases.insert(missing_covars.begin(), missing_covars.end());
-	incomplete_cases.insert(missing_phenos.begin(), missing_phenos.end());
 	incomplete_cases.insert(missing_envs.begin(), missing_envs.end());
-	if(params.pheno_file != "NULL") {
-		Y = reduce_mat_to_complete_cases( Y, Y_reduced, n_pheno, incomplete_cases );
-	}
 	if(params.covar_file != "NULL" || n_covar > 0) {
 		W = reduce_mat_to_complete_cases( W, W_reduced, n_covar, incomplete_cases );
 	}
@@ -380,8 +376,9 @@ void Data::reduce_to_complete_cases() {
 	missing_covars.clear();
 	missing_envs.clear();
 
-	std::cout << "Reduced to " << n_samples << " samples with complete data";
-	std::cout << " across covariates and phenotype." << std::endl;
+	if(!incomplete_cases.empty()) {
+		std::cout << "Reduced to " << n_samples << " samples with complete data." << std::endl;
+	}
 }
 
 void Data::calc_ssv() {
@@ -567,179 +564,181 @@ void Data::gen_pheno() {
 	std::cout << "Initialising random sample generator with seed " << params.random_seed << std::endl;
 	std::mt19937 generator{params.random_seed};
 
-	// target variances
-	double sigma_b, sigma_g = 0, sigma_b2, sigma_g2 = 0, sigma_c = 0, sigma_e = 0;
-	sigma_b = params.hb / (1.0 - params.hc - params.he - params.hb - params.hg - params.hb2 - params.hg2);
-	sigma_b2 = params.hb2 / (1.0 - params.hc - params.he - params.hb - params.hg - params.hb2 - params.hg2);
-	if(n_env > 0) {
-		sigma_g = params.hg / (1.0 - params.hc - params.he - params.hb - params.hg - params.hb2 - params.hg2);
-		sigma_g2 = params.hg2 / (1.0 - params.hc - params.he - params.hb - params.hg - params.hb2 - params.hg2);
-		sigma_e = params.he / (1.0 - params.hc - params.he - params.hb - params.hg - params.hb2 - params.hg2);
-	}
-	if(n_covar > 0) {
-		sigma_c = params.hc / (1.0 - params.hc - params.he - params.hb - params.hg - params.hb2 - params.hg2);
-	}
-
 	// additive noise
 	noise.resize(n_samples);
 	sim_gaussian_noise(noise, 1, generator);
 	noise    *= std::sqrt(params.sigma / var(noise));
 
-	// additive covar effects
-	if(params.hc > 0) {
-		EigenDataVector tau(n_covar);
-		sim_gaussian_noise(tau, 1, generator);
-		Wtau = W * tau;
-		double sf = params.sigma * sigma_c / var(Wtau);
-		Wtau     *= std::sqrt(sf);
-	} else {
-		Wtau = EigenDataVector::Zero(n_samples);
-	}
+	// Additive main effects from --covar and --environment
+	Wtau = EigenDataVector::Zero(n_samples);
+	Ealpha = EigenDataVector::Zero(n_samples);
 
-	// additive env effects
-	if(params.he > 0) {
-		EigenDataVector alpha(n_env);
-		sim_gaussian_noise(alpha, 1, generator);
-		Ealpha = E * alpha;
-		double sf = params.sigma * sigma_e / var(Ealpha);
-		Ealpha    *= std::sqrt(sf);
-	} else {
-		Ealpha = EigenDataVector::Zero(n_samples);
-	}
+	// target variances
+	if(params.rescale_coeffs) {
+		double sigma_b, sigma_g = 0, sigma_b2, sigma_g2 = 0, sigma_c = 0, sigma_e = 0;
+		sigma_b = params.hb / (1.0 - params.hc - params.he - params.hb - params.hg - params.hb2 - params.hg2);
+		sigma_b2 = params.hb2 / (1.0 - params.hc - params.he - params.hb - params.hg - params.hb2 - params.hg2);
+		if(n_env > 0) {
+			sigma_g = params.hg / (1.0 - params.hc - params.he - params.hb - params.hg - params.hb2 - params.hg2);
+			sigma_g2 = params.hg2 / (1.0 - params.hc - params.he - params.hb - params.hg - params.hb2 - params.hg2);
+			sigma_e = params.he / (1.0 - params.hc - params.he - params.hb - params.hg - params.hb2 - params.hg2);
+		}
+		if(n_covar > 0) {
+			sigma_c = params.hc / (1.0 - params.hc - params.he - params.hb - params.hg - params.hb2 - params.hg2);
+		}
 
-	// rescaling for correct heritability
-	scalarData var_xb = var(Xb);
-	Xb       *= std::sqrt(params.sigma * sigma_b / var_xb);
-	B.col(0) *= std::sqrt(params.sigma * sigma_b / var_xb);
+		// additive covar effects
+		if(params.hc > 0) {
+			EigenDataVector tau(n_covar);
+			sim_gaussian_noise(tau, 1, generator);
+			Wtau = W * tau;
+			double sf = params.sigma * sigma_c / var(Wtau);
+			Wtau     *= std::sqrt(sf);
+		}
 
-	if(n_env > 0) {
-		scalarData var_zg = var(Zg);
-		Zg       *= std::sqrt(params.sigma * sigma_g / var_zg);
-		B.col(1) *= std::sqrt(params.sigma * sigma_g / var_zg);
-	}
+		// additive env effects
+		if(params.he > 0) {
+			EigenDataVector alpha(n_env);
+			sim_gaussian_noise(alpha, 1, generator);
+			Ealpha = E * alpha;
+			double sf = params.sigma * sigma_e / var(Ealpha);
+			Ealpha    *= std::sqrt(sf);
+		}
 
-	if(params.coeffs2_file != "NULL") {
-		scalarData var_xb = var(Xb2);
-		Xb2       *= std::sqrt(params.sigma * sigma_b2 / var_xb);
-		B2.col(0) *= std::sqrt(params.sigma * sigma_b2 / var_xb);
+		// rescaling for correct heritability
+		scalarData var_xb = var(Xb);
+		Xb       *= std::sqrt(params.sigma * sigma_b / var_xb);
+		B.col(0) *= std::sqrt(params.sigma * sigma_b / var_xb);
 
 		if(n_env > 0) {
-			scalarData var_zg = var(Zg2);
-			Zg2       *= std::sqrt(params.sigma * sigma_g2 / var_zg);
-			B2.col(1) *= std::sqrt(params.sigma * sigma_g2 / var_zg);
+			scalarData var_zg = var(Zg);
+			Zg       *= std::sqrt(params.sigma * sigma_g / var_zg);
+			B.col(1) *= std::sqrt(params.sigma * sigma_g / var_zg);
+		}
+
+		if(params.coeffs2_file != "NULL") {
+			scalarData var_xb = var(Xb2);
+			Xb2       *= std::sqrt(params.sigma * sigma_b2 / var_xb);
+			B2.col(0) *= std::sqrt(params.sigma * sigma_b2 / var_xb);
+
+			if(n_env > 0) {
+				scalarData var_zg = var(Zg2);
+				Zg2       *= std::sqrt(params.sigma * sigma_g2 / var_zg);
+				B2.col(1) *= std::sqrt(params.sigma * sigma_g2 / var_zg);
+			}
 		}
 	}
 
 	Y = Wtau + Ealpha + Xb + Zg + Xb2 + Zg2 + noise;
 	std::cout << "Heritability partition (ignoring covariance):" << std::endl;
-	std::cout << "hb = " << var(Xb) / var(Y) << std::endl;
-	std::cout << "hg = " << var(Zg) / var(Y) << std::endl;
-	std::cout << "hb2 = " << var(Xb2) / var(Y) << std::endl;
-	std::cout << "hg2 = " << var(Zg2) / var(Y) << std::endl;
-	std::cout << "he = " << var(Ealpha) / var(Y) << std::endl;
-	std::cout << "hc = " << var(Wtau) / var(Y) << std::endl;
+	std::cout << "h2-G = " << var(Xb) / var(Y) << std::endl;
+	if(n_env > 0) std::cout << "h2-GxE = " << var(Zg) / var(Y) << std::endl;
+	if(params.coeffs2_file != "NULL") std::cout << "hb2 = " << var(Xb2) / var(Y) << std::endl;
+	if(params.coeffs2_file != "NULL") std::cout << "hg2 = " << var(Zg2) / var(Y) << std::endl;
+	if(n_env > 0) std::cout << "h2-Env = " << var(Ealpha) / var(Y) << std::endl;
+	if(n_covar > 0) std::cout << "h2-Covars = " << var(Wtau) / var(Y) << std::endl;
 	std::cout << "Noise has variance: " << params.sigma << std::endl;
 }
 
-void Data::gen2_pheno() {
-	// Controlling heritability of generated phenotype with variance of
-	// noise subsequently added, a la BSLMM.
-
-	if(params.covar_file != "NULL") {
-		read_covar();
-	}
-	if(params.env_file != "NULL") {
-		read_environment();
-	} else {
-		E = W;
-		n_env = n_covar;
-		env_names = covar_names;
-	}
-	if(n_env > 1) {
-		std::cout << "WARNING: " << n_env << " cols detected in " << params.env_file << ". Just using first" << std::endl;
-		E = E.col(0);
-		n_env = 1;
-		env_names.resize(1);
-	}
-	read_coeffs();
-
-	// Step 2; Reduce raw covariates and phenotypes to complete cases
-	// - may change value of n_samples
-	// - will also skip these cases when reading bgen later
-	reduce_to_complete_cases();
-
-	// Step 3; Normalise covars
-	if(n_covar > 0 && !params.use_raw_covars) {
-		center_matrix( W, n_covar );
-		scale_matrix( W, n_covar, covar_names );
-	}
-	if(n_env > 0 && !params.use_raw_env) {
-		center_matrix( E, n_env );
-		scale_matrix( E, n_env, env_names );
-	}
-
-	// S2; genetic or interaction effects
-	Xb = EigenDataArrayX::Zero(n_samples);
-	Zg = EigenDataArrayX::Zero(n_samples);
-	int ch = 0;
-	while (read_bgen_chunk()) {
-		// Raw dosage read in to G
-		if(ch % 10 == 0) {
-			std::cout << "Chunk " << ch+1 << " read (size " << n_var;
-			std::cout << ", " << n_var_parsed-1 << "/" << bgenView->number_of_variants();
-			std::cout << " variants parsed)" << std::endl;
-		}
-		assert(n_var == G.cols());
-
-		// Add effects to Y
-		for (int kk = 0; kk < n_var; kk++) {
-			Xb += G.col(kk).array() * B(kk + n_total_var, 0);
-			Zg += G.col(kk).array() * E.array() * B(kk + n_total_var, 1);
-		}
-
-		n_total_var += n_var;
-		ch++;
-	}
-	if(n_total_var != B.rows()) {
-		std::cout << "ERROR: n var read in = " << n_total_var << std::endl;
-		std::cout << "ERROR: n coeffs read in = " << B.rows() << std::endl;
-		assert(n_total_var == B.rows());
-	}
-	if(n_constant_variance > 0) {
-		std::cout << " Removed " << n_constant_variance  << " column(s) with zero variance:" << std::endl;
-	}
-
-	if(params.sim_w_noise) {
-		// Generate noise
-		double var_xb = (Xb - Xb.mean()).square().sum() / ((double) n_samples - 1.0);
-		double var_zg = (Zg - Zg.mean()).square().sum() / ((double) n_samples - 1.0);
-		double sigma = (var_xb + var_zg) * (1 - params.hb - params.hg);
-		sigma /= (params.hb + params.hg);
-		std::cout << "Checking empirical variances" << std::endl;
-		std::cout << "Var(Xb) = " << var_xb << std::endl;
-		std::cout << "Var(Zg) = " << var_zg << std::endl;
-		std::cout << "sigma = " << sigma << std::endl;
-
-		// http://itscompiling.eu/2016/04/11/generating-random-numbers-cpp/
-		std::random_device rd;
-		std::mt19937 generator{rd()};
-		std::normal_distribution<scalarData> standard_normal(0.0, std::sqrt(sigma));
-		std::cout << "Adding white noise with variance: " << sigma << std::endl;
-		noise.resize(n_samples);
-		for (std::size_t ii = 0; ii < n_samples; ii++) {
-			noise(ii) = standard_normal(generator);
-		}
-
-		double var_noise = (noise - noise.mean()).square().sum() / ((double) n_samples - 1.0);
-		noise *= std::sqrt(sigma / var_noise);
-
-		if(params.covar_file == "NULL") {
-			Y = Xb + Zg + noise;
-		} else {
-			Y = W.rowwise().sum().array() + Xb + Zg + noise;
-		}
-	}
-}
+//void Data::gen2_pheno() {
+//	// Controlling heritability of generated phenotype with variance of
+//	// noise subsequently added, a la BSLMM.
+//
+//	if(params.covar_file != "NULL") {
+//		read_covar();
+//	}
+//	if(params.env_file != "NULL") {
+//		read_environment();
+//	} else {
+//		E = W;
+//		n_env = n_covar;
+//		env_names = covar_names;
+//	}
+//	if(n_env > 1) {
+//		std::cout << "WARNING: " << n_env << " cols detected in " << params.env_file << ". Just using first" << std::endl;
+//		E = E.col(0);
+//		n_env = 1;
+//		env_names.resize(1);
+//	}
+//	read_coeffs();
+//
+//	// Step 2; Reduce raw covariates and phenotypes to complete cases
+//	// - may change value of n_samples
+//	// - will also skip these cases when reading bgen later
+//	reduce_to_complete_cases();
+//
+//	// Step 3; Normalise covars
+//	if(n_covar > 0 && !params.use_raw_covars) {
+//		center_matrix( W, n_covar );
+//		scale_matrix( W, n_covar, covar_names );
+//	}
+//	if(n_env > 0 && !params.use_raw_env) {
+//		center_matrix( E, n_env );
+//		scale_matrix( E, n_env, env_names );
+//	}
+//
+//	// S2; genetic or interaction effects
+//	Xb = EigenDataArrayX::Zero(n_samples);
+//	Zg = EigenDataArrayX::Zero(n_samples);
+//	int ch = 0;
+//	while (read_bgen_chunk()) {
+//		// Raw dosage read in to G
+//		if(ch % 10 == 0) {
+//			std::cout << "Chunk " << ch+1 << " read (size " << n_var;
+//			std::cout << ", " << n_var_parsed-1 << "/" << bgenView->number_of_variants();
+//			std::cout << " variants parsed)" << std::endl;
+//		}
+//		assert(n_var == G.cols());
+//
+//		// Add effects to Y
+//		for (int kk = 0; kk < n_var; kk++) {
+//			Xb += G.col(kk).array() * B(kk + n_total_var, 0);
+//			Zg += G.col(kk).array() * E.array() * B(kk + n_total_var, 1);
+//		}
+//
+//		n_total_var += n_var;
+//		ch++;
+//	}
+//	if(n_total_var != B.rows()) {
+//		std::cout << "ERROR: n var read in = " << n_total_var << std::endl;
+//		std::cout << "ERROR: n coeffs read in = " << B.rows() << std::endl;
+//		assert(n_total_var == B.rows());
+//	}
+//	if(n_constant_variance > 0) {
+//		std::cout << " Removed " << n_constant_variance  << " column(s) with zero variance:" << std::endl;
+//	}
+//
+//	if(params.sim_w_noise) {
+//		// Generate noise
+//		double var_xb = (Xb - Xb.mean()).square().sum() / ((double) n_samples - 1.0);
+//		double var_zg = (Zg - Zg.mean()).square().sum() / ((double) n_samples - 1.0);
+//		double sigma = (var_xb + var_zg) * (1 - params.hb - params.hg);
+//		sigma /= (params.hb + params.hg);
+//		std::cout << "Checking empirical variances" << std::endl;
+//		std::cout << "Var(Xb) = " << var_xb << std::endl;
+//		std::cout << "Var(Zg) = " << var_zg << std::endl;
+//		std::cout << "sigma = " << sigma << std::endl;
+//
+//		// http://itscompiling.eu/2016/04/11/generating-random-numbers-cpp/
+//		std::random_device rd;
+//		std::mt19937 generator{rd()};
+//		std::normal_distribution<scalarData> standard_normal(0.0, std::sqrt(sigma));
+//		std::cout << "Adding white noise with variance: " << sigma << std::endl;
+//		noise.resize(n_samples);
+//		for (std::size_t ii = 0; ii < n_samples; ii++) {
+//			noise(ii) = standard_normal(generator);
+//		}
+//
+//		double var_noise = (noise - noise.mean()).square().sum() / ((double) n_samples - 1.0);
+//		noise *= std::sqrt(sigma / var_noise);
+//
+//		if(params.covar_file == "NULL") {
+//			Y = Xb + Zg + noise;
+//		} else {
+//			Y = W.rowwise().sum().array() + Xb + Zg + noise;
+//		}
+//	}
+//}
 
 void Data::compute_correlations_chunk(EigenRefDataArrayXX dXtEEX_chunk) {
 	assert(dXtEEX_chunk.rows() == n_var);
@@ -760,7 +759,7 @@ void Data::compute_correlations_chunk(EigenRefDataArrayXX dXtEEX_chunk) {
 void Data::print_keys() {
 	// Step 4; compute correlations
 	int ch = 0;
-	reduce_to_complete_cases();                             // From read_sids!!
+	reduce_to_complete_cases();                                         // From read_sids!!
 	// std::cout << "num samples: " << n_samples << std::endl;
 	while (read_bgen_chunk()) {
 		// Raw dosage read in to G
