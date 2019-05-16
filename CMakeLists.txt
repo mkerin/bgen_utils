@@ -36,7 +36,7 @@ list(APPEND COMPILE_OPTS -DVERSION_MAJOR=${PROJECT_VERSION_MAJOR})
 list(APPEND COMPILE_OPTS -DVERSION_MINOR=${PROJECT_VERSION_MINOR})
 list(APPEND COMPILE_OPTS -DVERSION_PATCH=${PROJECT_VERSION_PATCH})
 
-set(SOURCES src/data.cpp)
+set(SOURCES src/data.cpp src/parse_arguments.cpp)
 set(BGEN_INCL_DIRS ${BGEN}/genfile/include ${BGEN}/3rd_party/zstd-1.1.0/lib ${BGEN}/db/include ${BGEN}/3rd_party/sqlite3 ${BGEN}/3rd_party/boost_1_55_0)
 
 ##Platform invariant variables
@@ -65,6 +65,7 @@ target_link_libraries(${TARGET}_Xf ${BGEN_LIB} ${DB_LIB} ${SQLITE_LIB} ${ZSTD_LI
 
 # Tests
 add_executable(catch_tests unit/main.cpp unit/tests_main.cpp unit/test_sim_pheno.cpp ${SOURCES})
+#add_executable(catch_tests unit/main.cpp unit/test_sim_pheno.cpp ${SOURCES})
 target_link_libraries(catch_tests ${BGEN_LIB} ${DB_LIB} ${SQLITE_LIB} ${ZSTD_LIB} ${LIBS} ${LINKER_OPTS})
 target_compile_options(catch_tests PRIVATE ${COMPILE_OPTS})
 target_include_directories(catch_tests PRIVATE ${BGEN_INCL_DIRS})

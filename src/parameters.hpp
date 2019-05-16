@@ -14,11 +14,10 @@ class parameters {
 		int chunk_size, missing_code;
 		uint32_t start, end;
 		bool range, maf_lim, info_lim, mode_gen_pheno, mode_pred_pheno, mode_gen2_pheno, mode_ssv, incl_snps, excl_snps;
-		bool geno_check, keep_constant_variants, sim_w_noise, mode_print_keys, flip_high_maf_variants;
+		bool keep_constant_variants, sim_w_noise, mode_print_keys, flip_high_maf_variants;
 		bool select_rsid, mode_compute_correlations, use_raw_covars, use_raw_env, mode_low_mem;
 		bool print_causal_rsids;
 		double min_maf, min_info, sigma, hb, hg, hb2, hg2, hc, he, rescale_coeffs;
-		std::vector < std::string > incl_sample_ids;
 		unsigned int random_seed;
 
 	// constructors/destructors
@@ -56,7 +55,7 @@ class parameters {
 		mode_low_mem = false;
 		use_raw_covars = false;
 		use_raw_env = false;
-		geno_check = true; // check allele probs sum to 1 by default
+		// check allele probs sum to 1 by default
 		sigma = 1;
 		hb = 0;  // trait variance explained by additive genetics
 		hg = 0;  // trait variance explained by additive GxE
