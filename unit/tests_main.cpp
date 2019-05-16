@@ -13,11 +13,11 @@
 
 TEST_CASE("Data") {
 	parameters p;
-	p.env_file = "data/io_test/n50_p100_env.txt";
+	p.env_file = "unit/data/n50_p100_env.txt";
 
 	SECTION("dXtEEX computed correctly (low mem)") {
-		p.bgen_file = "data/io_test/n50_p100.bgen";
-		p.bgi_file = "data/io_test/n50_p100.bgen.bgi";
+		p.bgen_file = "unit/data/n50_p100.bgen";
+		p.bgi_file = "unit/data/n50_p100.bgen.bgi";
 		p.mode_low_mem = true;
 		Data data(p);
 		data.read_environment();
@@ -46,9 +46,9 @@ TEST_CASE("Data") {
 	}
 
 	SECTION("dXtEEX computed correctly (low mem) w covars") {
-		p.covar_file = "data/io_test/age.txt";
-		p.bgen_file = "data/io_test/n50_p100.bgen";
-		p.bgi_file = "data/io_test/n50_p100.bgen.bgi";
+		p.covar_file = "unit/data/age.txt";
+		p.bgen_file = "unit/data/n50_p100.bgen";
+		p.bgi_file = "unit/data/n50_p100.bgen.bgi";
 		p.mode_low_mem = true;
 		Data data(p);
 		data.read_environment();
@@ -83,10 +83,10 @@ TEST_CASE("Data") {
 	}
 
 	SECTION("dXtEEX computed correctly (low mem), covars, incl sids") {
-		p.covar_file = "data/io_test/age.txt";
-		p.bgen_file = "data/io_test/n50_p100.bgen";
-		p.bgi_file = "data/io_test/n50_p100.bgen.bgi";
-		p.incl_sids_file = "data/io_test/sample_ids.txt";
+		p.covar_file = "unit/data/age.txt";
+		p.bgen_file = "unit/data/n50_p100.bgen";
+		p.bgi_file = "unit/data/n50_p100.bgen.bgi";
+		p.incl_sids_file = "unit/data/sample_ids.txt";
 		p.mode_low_mem = true;
 		Data data(p);
 		data.read_environment();
@@ -122,8 +122,8 @@ TEST_CASE("Data") {
 	}
 
 	SECTION("dXtEEX computed correctly (high mem)") {
-		p.bgen_file = "data/io_test/n50_p100.bgen";
-		p.bgi_file = "data/io_test/n50_p100.bgen.bgi";
+		p.bgen_file = "unit/data/n50_p100.bgen";
+		p.bgi_file = "unit/data/n50_p100.bgen.bgi";
 		Data data(p);
 		data.read_environment();
 		data.reduce_to_complete_cases();

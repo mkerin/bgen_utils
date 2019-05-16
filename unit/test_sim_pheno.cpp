@@ -18,17 +18,17 @@
 TEST_CASE("parse commandline"){
 	parameters p;
 	char* argv[] = { (char*) "bin/bgen_utils",
-				  (char*) "--mode_gen_pheno",
-				  (char*) "--incl_sample_ids", (char*) "data/io_test/sample_ids.txt",
-				  (char*) "--coeffs", (char*) "data/io_test/sample_ids.txt",
-				  (char*) "--range", (char*) "12:13-14",
-				  (char*) "--out", (char*) "data/io_test/sample_ids.txt",
-				  (char*) "--bgen", (char*) "data/io_test/n50_p100.bgen"};
+		             (char*) "--mode_gen_pheno",
+		             (char*) "--incl_sample_ids", (char*) "unit/data/sample_ids.txt",
+		             (char*) "--coeffs", (char*) "unit/data/sample_ids.txt",
+		             (char*) "--range", (char*) "12:13-14",
+		             (char*) "--out", (char*) "unit/data/sample_ids.txt",
+		             (char*) "--bgen", (char*) "unit/data/n50_p100.bgen"};
 	int argc = sizeof(argv)/sizeof(argv[0]);
 	parse_arguments(p, argc, argv);
 
-	CHECK(p.incl_sids_file == "data/io_test/sample_ids.txt");
-	CHECK(p.bgen_file == "data/io_test/n50_p100.bgen");
+	CHECK(p.incl_sids_file == "unit/data/sample_ids.txt");
+	CHECK(p.bgen_file == "unit/data/n50_p100.bgen");
 	CHECK(p.covar_file == "NULL");
 	CHECK(p.chr == "12");
 	CHECK(p.start == 13);
@@ -38,9 +38,9 @@ TEST_CASE("parse commandline"){
 
 TEST_CASE("sim_phenotype"){
 	parameters p;
-	p.bgen_file = "data/io_test/n50_p100.bgen";
-	p.bgi_file = "data/io_test/n50_p100.bgen.bgi";
-	p.coeffs_file = "data/io_test/coeffs_w_snpkey.txt";
+	p.bgen_file = "unit/data/n50_p100.bgen";
+	p.bgi_file = "unit/data/n50_p100.bgen.bgi";
+	p.coeffs_file = "unit/data/coeffs_w_snpkey.txt";
 
 	p.mode_gen_pheno = true;
 	p.random_seed = 1;
@@ -54,4 +54,3 @@ TEST_CASE("sim_phenotype"){
 	CHECK(data.Y(3) == Approx(1.6308280995));
 	CHECK(data.Y(4) == Approx(-2.0189108167));
 }
-

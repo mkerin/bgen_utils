@@ -3,7 +3,6 @@ build/*
 lib/*
 3rd_party/*
 archive/*
-src/tools/*
 data/*
 tests/data/*
 
