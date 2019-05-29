@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.7.2)
-project(LEMMA_utils VERSION 0.1.0)
+project(bgen_utils VERSION 0.1.0)
 
 set(CMAKE_CXX_STANDARD 11)
 
@@ -49,22 +49,22 @@ set(LIBS boost dl pthread boost_iostreams z ${LIBS})
 
 ##Defining compilation commands
 #set(TARGET bgen_prog)
-set(TARGET calc_sample_var)
+set(TARGET bgen_utils)
 
-add_executable(${TARGET} src/calc_sample_var.cpp ${SOURCES})
+add_executable(${TARGET} src/main.cpp ${SOURCES})
 target_include_directories(${TARGET} PRIVATE ${BGEN_INCL_DIRS})
 target_compile_options(${TARGET} PRIVATE ${COMPILE_OPTS})
 set_target_properties(${TARGET} PROPERTIES LINK_FLAGS "${LIB-DIRS}")
 target_link_libraries(${TARGET} ${BGEN_LIB} ${DB_LIB} ${SQLITE_LIB} ${ZSTD_LIB} ${LIBS} ${LINKER_OPTS})
 
-add_executable(${TARGET}_Xf src/calc_sample_var.cpp ${SOURCES})
+add_executable(${TARGET}_Xf src/main.cpp ${SOURCES})
 target_include_directories(${TARGET}_Xf PRIVATE ${BGEN_INCL_DIRS})
 target_compile_options(${TARGET}_Xf PRIVATE -DDATA_AS_FLOAT ${COMPILE_OPTS})
 set_target_properties(${TARGET}_Xf PROPERTIES LINK_FLAGS "${LIB-DIRS}")
 target_link_libraries(${TARGET}_Xf ${BGEN_LIB} ${DB_LIB} ${SQLITE_LIB} ${ZSTD_LIB} ${LIBS} ${LINKER_OPTS})
 
 # Tests
-add_executable(catch_tests tests/main.cpp tests/tests-main.cpp)
+add_executable(catch_tests unit/main.cpp unit/tests_main.cpp unit/test_sim_pheno.cpp ${SOURCES})
 target_link_libraries(catch_tests ${BGEN_LIB} ${DB_LIB} ${SQLITE_LIB} ${ZSTD_LIB} ${LIBS} ${LINKER_OPTS})
 target_compile_options(catch_tests PRIVATE ${COMPILE_OPTS})
 target_include_directories(catch_tests PRIVATE ${BGEN_INCL_DIRS})
