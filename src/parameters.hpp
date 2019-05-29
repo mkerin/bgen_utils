@@ -17,7 +17,8 @@ class parameters {
 		bool keep_constant_variants, sim_w_noise, mode_print_keys, flip_high_maf_variants;
 		bool select_rsid, mode_compute_correlations, use_raw_covars, use_raw_env, mode_low_mem;
 		bool print_causal_rsids;
-		double min_maf, min_info, sigma, hb, hg, hb2, hg2, hc, he, rescale_coeffs;
+		double min_maf, min_info, sigma, hb, hg, hb2, hg2, hc, he;
+		bool rescale_coeffs;
 		unsigned int random_seed;
 
 	// constructors/destructors

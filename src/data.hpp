@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>     // for ptrdiff_t class
+#include <unordered_map>
 #include <map>
 #include <vector>
 #include <iostream>
@@ -57,21 +58,21 @@ std::vector< std::string > SNPKEYS;
 std::vector< std::string > chromosome_cum, rsid_cum, SNPID_cum;
 std::vector< uint32_t > position_cum;
 std::vector< std::vector< std::string > > alleles_cum;
-std::vector< std::string > SNPKEYS_cum;
 
 int n_pheno;                      // number of phenotypes
 int n_covar;                      // number of covariates
 int n_samples;                    // number of samples
 int n_env;
-std::size_t n_total_var;
+long n_total_var;
 bool bgen_pass;
-int n_var;
-std::size_t n_var_parsed;         // Track progress through IndexQuery
+long n_var;
+long n_var_parsed;         // Track progress through IndexQuery
 long int n_constant_variance;
 
 bool Y_reduced;           // Variables to track whether we have already
 bool W_reduced;           // reduced to complete cases or not.
 bool E_reduced;           // reduced to complete cases or not.
+	std::unordered_map<long, bool> sample_is_invalid;
 
 std::vector< double > info;
 std::vector< double > maf;
@@ -79,10 +80,10 @@ std::vector< double > maf_cum;
 std::vector< std::string > incl_rsid_list;
 std::vector< std::string > excl_rsid_list;
 
-std::map<int, bool> missing_covars;         // set of subjects missing >= 1 covariate
-std::map<int, bool> missing_phenos;         // set of subjects missing >= phenotype
-std::map<int, bool> missing_envs;         // set of subjects missing >= phenotype
-std::map< int, bool > incomplete_cases;         // union of samples missing data
+std::map<long, bool> missing_covars;         // set of subjects missing >= 1 covariate
+std::map<long, bool> missing_phenos;         // set of subjects missing >= phenotype
+std::map<long, bool> missing_envs;         // set of subjects missing >= phenotype
+std::map<long, bool > incomplete_cases;         // union of samples missing data
 
 	std::vector< std::string > covar_names;
 std::vector< std::string > env_names;
@@ -96,25 +97,18 @@ EigenDataArrayX Xb, Zg, Xb2, Zg2, Ealpha, Wtau, noise;
 EigenDataMatrix env_profile;
 
 // Matching snps via the SNPKEY
-std::map<std::string, long> B_SNPKEYS_map;
+std::unordered_map<std::string, long> B_SNPKEYS_map;
 std::vector<std::string> B_SNPKEYS;
 bool match_snpkeys;
-std::map<std::string, long> B_SNPIDS_map;
+std::unordered_map<std::string, long> B_SNPIDS_map;
 std::vector<std::string> B_SNPIDS;
 bool match_snpids;
 
 genfile::bgen::View::UniquePtr bgenView;
-std::vector< double > beta, tau, neglogP, neglogP_2dof;
-std::vector< std::vector< double > > gamma;
 
 boost_io::filtering_ostream outf, outf_pred, outf_coeffs;
 
 std::chrono::system_clock::time_point start;
-
-// grid things for vbayes
-std::vector< std::string > hyps_names, imprt_names;
-Eigen::MatrixXd hyps_grid, imprt_grid;
-Eigen::VectorXd alpha_init, mu_init;
 
 // Sum of sample variances
 double s_x, s_z;
@@ -162,10 +156,10 @@ std::string fstream_init(boost_io::filtering_ostream& my_outf,
                          const std::string& file_suffix){
 
 	std::string filepath   = orig_file_path;
-	std::string dir        = filepath.substr(0, filepath.rfind("/")+1);
-	std::string stem_w_dir = filepath.substr(0, filepath.find("."));
-	std::string stem       = stem_w_dir.substr(stem_w_dir.rfind("/")+1, stem_w_dir.size());
-	std::string ext        = filepath.substr(filepath.find("."), filepath.size());
+	std::string dir        = filepath.substr(0, filepath.rfind('/')+1);
+	std::string stem_w_dir = filepath.substr(0, filepath.find('.'));
+	std::string stem       = stem_w_dir.substr(stem_w_dir.rfind('/')+1, stem_w_dir.size());
+	std::string ext        = filepath.substr(filepath.find('.'), filepath.size());
 
 	std::string ofile      = dir + stem + file_suffix + ext;
 
@@ -174,7 +168,7 @@ std::string fstream_init(boost_io::filtering_ostream& my_outf,
 	if (orig_file_path.find(gz_str) != std::string::npos) {
 		my_outf.push(boost_io::gzip_compressor());
 	}
-	my_outf.push(boost_io::file_sink(ofile.c_str()));
+	my_outf.push(boost_io::file_sink(ofile));
 	return ofile;
 }
 
@@ -295,12 +289,12 @@ bool read_bgen_chunk() {
 	std::string rsid_j;
 	std::vector< std::string > alleles_j;
 	std::string SNPID_j;                  // read but ignored
-	std::vector< std::vector< double > > probs;
-	ProbSetter setter( &probs );
 
-	double x, dosage, check, info_j, f1, chunk_missingness;
-	double missing_calls = 0.0;
-	int n_var_incomplete = 0;
+	long nInvalid = sample_is_invalid.size() - n_samples;
+	DosageSetter setter_v2(sample_is_invalid, nInvalid);
+
+	double chunk_missingness = 0;
+	long n_var_incomplete = 0;
 
 	// Wipe variant context from last chunk
 	maf.clear();
@@ -315,72 +309,23 @@ bool read_bgen_chunk() {
 	// Resize genotype matrix
 	G.resize(n_samples, params.chunk_size);
 
-	std::size_t valid_count, jj = 0;
-	Eigen::Array<unsigned char, Eigen::Dynamic, 1> M_j(n_samples);
+	long jj = 0;
 	while ( jj < params.chunk_size && bgen_pass ) {
-		bgen_pass = bgenView->read_variant( &SNPID_j, &rsid_j, &chr_j, &pos_j, &alleles_j );
+		bgen_pass = bgenView->read_variant(&SNPID_j, &rsid_j, &chr_j, &pos_j, &alleles_j);
 		if (!bgen_pass) break;
 		n_var_parsed++;
-		assert( alleles_j.size() > 0 );
 
 		// Read probs + check maf filter
-		bgenView->read_genotype_data_block( setter );
+		bgenView->read_genotype_data_block( setter_v2 );
 
-		// maf + info filters; computed on valid sample_ids & variants whose alleles
-		// sum to 1
-		std::map<int, bool> missing_genos;
-		EigenDataArrayX dosage_j(n_samples);
-		double f2 = 0.0;
-		double valid_count = 0;
-		std::uint32_t ii_obs = 0;
-		for( std::size_t ii = 0; ii < probs.size(); ++ii ) {
-			if (incomplete_cases.count(ii) == 0) {
-				f1 = dosage = check = 0.0;
-				for( std::size_t kk = 0; kk < probs[ii].size(); kk++ ) {
-					x = probs[ii][kk];
-					dosage += x * kk;
-					f1 += x * kk * kk;
-					check += x;
-				}
-				if(check > 0.9999 && check < 1.0001) {
-					dosage_j[ii_obs] = dosage;
-					f2 += (f1 - dosage * dosage);
-					valid_count++;
-				} else {
-					missing_genos[ii_obs] = 1;
-					dosage_j[ii_obs] = 0.0;
-				}
-				ii_obs++;
-			}
-		}
-		assert(ii_obs == n_samples);
-
-		double d1    = dosage_j.sum();
-		double maf_j = d1 / (2.0 * valid_count);
-
-		// Flip dosage vector if maf > 0.5
-		if(params.flip_high_maf_variants && maf_j > 0.5) {
-			dosage_j = (2.0 - dosage_j);
-			for (std::uint32_t ii = 0; ii < n_samples; ii++) {
-				if (missing_genos.count(ii) > 0) {
-					dosage_j[ii] = 0.0;
-				}
-			}
-
-			f2       = 4.0 * valid_count - 4.0 * d1 + f2;
-			d1       = dosage_j.sum();
-			maf_j    = d1 / (2.0 * valid_count);
-		}
-
-		double mu    = d1 / valid_count;
-		info_j       = 1.0;
-		if(maf_j > 1e-10 && maf_j < 0.9999999999) {
-			info_j -= f2 / (2.0 * valid_count * maf_j * (1.0 - maf_j));
-		}
-
-		// Compute sd
-		double sigma = (dosage_j - mu).square().sum();
-		sigma = std::sqrt(sigma/(valid_count - 1.0));
+		double d1     = setter_v2.m_sum_eij;
+		double maf_j  = setter_v2.m_maf;
+		double info_j = setter_v2.m_info;
+		double mu     = setter_v2.m_mean;
+		double missingness_j    = setter_v2.m_missingness;
+		double sigma = std::sqrt(setter_v2.m_sigma2);
+		long valid_count = n_samples;
+		EigenDataArrayX dosage_j = setter_v2.m_dosage;
 
 		// Filters
 		if (params.maf_lim && (maf_j < params.min_maf || maf_j > 1 - params.min_maf)) {
@@ -399,6 +344,9 @@ bool read_bgen_chunk() {
 		}
 
 		// filters passed; write contextual info
+		chunk_missingness += missingness_j;
+		if(missingness_j > 0) n_var_incomplete++;
+
 		maf.push_back(maf_j);
 		info.push_back(info_j);
 		rsid.push_back(rsid_j);
@@ -414,27 +362,16 @@ bool read_bgen_chunk() {
 			continue;
 		}
 
-		// Scale + center dosage, set missing to mean
-		if(missing_genos.size() > 0) {
-			n_var_incomplete += 1;
-			missing_calls += (double) missing_genos.size();
-			for (std::uint32_t ii = 0; ii < n_samples; ii++) {
-				if (missing_genos.count(ii) > 0) {
-					dosage_j[ii] = mu;
-				}
-			}
-		}
-
 		if(params.mode_low_mem) {
 			double L = 2.0;
 			double intervalWidth = L / 256.0;
 			double invIntervalWidth = 256.0 / L;
 
 			// Compress
+			Eigen::Array<unsigned char, Eigen::Dynamic, 1> M_j(n_samples);
 			for (std::uint32_t ii = 0; ii < n_samples; ii++) {
 				M_j[ii] = std::floor(std::min(dosage_j[ii], (scalarData) (L - 1e-6)) * invIntervalWidth);
 			}
-
 			// Decompress
 			dosage_j = (M_j.cast<scalarData>() + 0.5) * intervalWidth;
 
@@ -459,11 +396,11 @@ bool read_bgen_chunk() {
 	assert( alleles.size() == jj );
 	n_var = jj;
 
-	chunk_missingness = missing_calls / (double) (n_var * n_samples);
+	chunk_missingness /= jj;
 	if(chunk_missingness > 0.0) {
-		std::cout << "Chunk missingness " << chunk_missingness << "(";
+		std::cout << "Mean chunk missingness " << chunk_missingness << "(";
 		std::cout << n_var_incomplete << "/" << n_var;
-		std::cout << " variants incomplete)" << std::endl;
+		std::cout << " variants contain >=1 imputed entry)" << std::endl;
 	}
 
 	maf_cum.insert(maf_cum.end(),               maf.begin(), maf.end());
@@ -492,7 +429,7 @@ void read_rsids(const std::string& filename,
                 std::vector< std::string >& rsid_list){
 	rsid_list.clear();
 	boost_io::filtering_istream fg;
-	fg.push(boost_io::file_source(params.incl_rsids_file.c_str()));
+	fg.push(boost_io::file_source(params.incl_rsids_file));
 	if (!fg) {
 		std::cout << "ERROR: " << params.incl_rsids_file << " not opened." << std::endl;
 		std::exit(EXIT_FAILURE);
@@ -555,16 +492,16 @@ void read_incl_sids(){
 	std::cout << std::endl;
 }
 
-void read_txt_file( std::string filename,
+void read_txt_file( const std::string& filename,
                     EigenDataMatrix& M,
                     int& n_cols,
                     std::vector< std::string >& col_names,
-                    std::map< int, bool >& incomplete_row ){
+                    std::map<long, bool >& incomplete_row ){
 	// pass top line of txt file filename to col_names, and body to M.
 	// TODO: Implement how to deal with missing values.
 
 	boost_io::filtering_istream fg;
-	fg.push(boost_io::file_source(filename.c_str()));
+	fg.push(boost_io::file_source(filename));
 	if (!fg) {
 		std::cout << "ERROR: " << filename << " not opened." << std::endl;
 		std::exit(EXIT_FAILURE);
@@ -618,7 +555,7 @@ void read_txt_file( std::string filename,
 					M(i, k) = tmp_d;
 				} else {
 					M(i, k) = params.missing_code;
-					incomplete_row[i] = 1;
+					incomplete_row[i] = true;
 				}
 			}
 			i++;                                 // loop should end at i == n_samples
@@ -665,11 +602,12 @@ void read_covar( ){
 void read_coeffs(){
 	// Read coefficients to eigen matrix B
 	std::vector<std::string> case1 = {"beta", "gamma"};
-	std::vector<std::string> case2 = {"SNPKEY", "beta", "gamma"};
-	std::vector<std::string> case3 = {"SNPID", "beta", "gamma"};
-
 	std::vector<std::string> case1b = {"beta"};
+
+	std::vector<std::string> case2 = {"SNPKEY", "beta", "gamma"};
 	std::vector<std::string> case2b = {"SNPKEY", "beta"};
+
+	std::vector<std::string> case3 = {"SNPID", "beta", "gamma"};
 	std::vector<std::string> case3b = {"SNPID", "beta"};
 
 	std::vector<std::string> coeff_names;

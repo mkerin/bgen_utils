@@ -33,7 +33,7 @@ template <typename EigenMat>
 EigenMat reduce_mat_to_complete_cases( EigenMat& M,
                                        bool& matrix_reduced,
                                        int n_cols,
-                                       std::map< int, bool > incomplete_cases ) {
+                                       std::map<long, bool > incomplete_cases ) {
 	// Remove rows contained in incomplete_cases
 	long nn = M.rows();
 	int n_incomplete;
@@ -365,10 +365,20 @@ void Data::reduce_to_complete_cases() {
 
 	incomplete_cases.insert(missing_covars.begin(), missing_covars.end());
 	incomplete_cases.insert(missing_envs.begin(), missing_envs.end());
-	if(params.covar_file != "NULL" || n_covar > 0) {
+
+	sample_is_invalid.clear();
+	for (long ii = 0; ii < n_samples; ii++){
+		if (incomplete_cases.find(ii) == incomplete_cases.end()){
+			sample_is_invalid[ii] = false;
+		} else {
+			sample_is_invalid[ii] = true;
+		}
+	}
+
+	if(n_covar > 0) {
 		W = reduce_mat_to_complete_cases( W, W_reduced, n_covar, incomplete_cases );
 	}
-	if(params.env_file != "NULL" || n_env > 0) {
+	if(n_env > 0) {
 		E = reduce_mat_to_complete_cases( E, E_reduced, n_env, incomplete_cases );
 	}
 	n_samples -= incomplete_cases.size();
