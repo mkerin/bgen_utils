@@ -21,7 +21,7 @@ Basic usage:
 ```
 bin/bgen_utils --sim_pheno \
 --bgen unit/data/n50_p100.bgen \
---coeffs unit/data/coeffs_w_snpkey.txt \
+--coeffs unit/data/coeffs_w_snpid.txt \
 --out tmp.txt
 ```
 
