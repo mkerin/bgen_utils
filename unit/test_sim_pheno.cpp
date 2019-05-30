@@ -47,7 +47,7 @@ TEST_CASE("sim_phenotype (SNPKEY)"){
 	p.min_maf = 0.01;
 
 	Data data(p);
-	data.gen_pheno();
+	data.sim_pheno();
 	CHECK(data.Y(0) == Approx(-1.508216515));
 	CHECK(data.Y(1) == Approx(-0.6373672634));
 	CHECK(data.Y(2) == Approx(-1.0795088689));
@@ -66,7 +66,7 @@ TEST_CASE("sim_phenotype (SNPIDS)"){
 	p.min_maf = 0.01;
 
 	Data data(p);
-	data.gen_pheno();
+	data.sim_pheno();
 	CHECK(data.Y(0) == Approx(-1.508216515));
 	CHECK(data.Y(1) == Approx(-0.6373672634));
 	CHECK(data.Y(2) == Approx(-1.0795088689));

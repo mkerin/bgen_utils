@@ -77,7 +77,7 @@ int main( int argc, char** argv ) {
 		} else if(p.mode_pred_pheno){
 			data.pred_pheno();
 		} else if(p.mode_gen_pheno) {
-			data.gen_pheno();
+			data.sim_pheno();
 		} else if(p.mode_gen2_pheno) {
 			// Depreciated
 			// data.gen2_pheno();

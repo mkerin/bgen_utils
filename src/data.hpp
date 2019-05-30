@@ -342,6 +342,11 @@ bool read_bgen_chunk() {
 			n_constant_variance++;
 			continue;
 		}
+		if(!std::isfinite(mu) || !std::isfinite(sigma)){
+			std::cout << "WARNING: non-finite mean / variance detected for SNP with:" <<std::endl;
+			std::cout << "SNPID: " << SNPID_j << std::endl;
+			std::cout << "RSID: " << rsid_j << std::endl;
+		}
 
 		// filters passed; write contextual info
 		chunk_missingness += missingness_j;
@@ -677,7 +682,7 @@ void calc_ssv();
 
 void pred_pheno();
 
-void gen_pheno();
+void sim_pheno();
 
 //void gen2_pheno();
 
