@@ -12,6 +12,7 @@
 #include <stdexcept>
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 
 // DosageSetter is a callback object appropriate for passing to bgen::read_genotype_data_block() or
 // the synonymous method of genfile::bgen::View. See the comment in bgen.hpp above
@@ -22,8 +23,7 @@ struct DosageSetter {
 	typedef EigenDataVector Data;
 
 	DosageSetter(std::unordered_map<long, bool> invalid_sample_ids, long nInvalid) :
-			m_sample_is_invalid(invalid_sample_ids), m_nInvalid(nInvalid)
-	{
+		m_sample_is_invalid(invalid_sample_ids), m_nInvalid(nInvalid) {
 	}
 
 	// Called once allowing us to set storage.
@@ -43,13 +43,14 @@ struct DosageSetter {
 	// to set the minimum and maximum ploidy and numbers of probabilities among samples in the data.
 	// This enables us to set up storage for the data ahead of time.
 	void set_min_max_ploidy( uint32_t min_ploidy, uint32_t max_ploidy, uint32_t min_entries, uint32_t max_entries ) {
-		// pass
+		assert(min_ploidy == 2);
+		assert(max_ploidy == 2);
 	}
 
 	// Called once per sample to determine whether we want data for this sample
 	bool set_sample( std::size_t i ) {
 		// Only want data from samples with complete data across pheno/covar/env
-		if (m_sample_is_invalid[i]){
+		if (m_sample_is_invalid[i]) {
 			m_samples_skipped++;
 			return false;
 		} else {
@@ -60,38 +61,35 @@ struct DosageSetter {
 
 	// Called once per sample to set the number of probabilities that are present.
 	void set_number_of_entries(
-			std::size_t ploidy,
-			std::size_t number_of_entries,
-			genfile::OrderType order_type,
-			genfile::ValueType value_type
-	) {
+		std::size_t ploidy,
+		std::size_t number_of_entries,
+		genfile::OrderType order_type,
+		genfile::ValueType value_type
+		) {
 		assert( value_type == genfile::eProbability );
 		assert(number_of_entries == 3);
 	}
 
 	// Called once for each genotype (or haplotype) probability per sample.
 	void set_value(const uint32_t& gg, const double& value ) {
-		if(gg == 0) {
-			m_dosage(m_sample_i) = 0;
-		} else {
-			m_dosage(m_sample_i) += gg * value;
+		m_eij += gg * value;
+		m_fij += gg * gg * value;
 
-			m_eij += gg * value;
-			m_fij += gg * gg * value;
-			if(gg == 2) {
-				m_sum_fij_minus_eij2 += m_fij - m_eij * m_eij;
-				m_sum_eij += m_eij;
-				m_sum_eij2 += m_eij * m_eij;
+		if(gg == 2) {
+			m_dosage(m_sample_i) = m_eij;
+			m_sum_fij_minus_eij2 += m_fij - m_eij * m_eij;
+			m_sum_eij += m_eij;
+			m_sum_eij2 += m_eij * m_eij;
 
-				m_fij = 0;
-				m_eij = 0;
-			}
+			m_fij = 0;
+			m_eij = 0;
 		}
+
 	}
 
 	// Ditto, but called if data is missing for this sample.
 	void set_value(const uint32_t&, const genfile::MissingValue& value){
-		m_missing_entries.push_back(m_sample_i);
+		m_missing_entries.insert(m_sample_i);
 	}
 
 	// If present with this signature, called once after all data has been set.
@@ -110,7 +108,7 @@ struct DosageSetter {
 		m_sigma2 /= (Nvalid - 1);
 
 		// Fill in missing values with mean
-		for (auto ii : m_missing_entries) {
+		for (const auto& ii : m_missing_entries) {
 			m_dosage(ii) = m_mean;
 		}
 		assert(m_samples_skipped == m_nInvalid);
@@ -130,7 +128,7 @@ private:
 	std::size_t m_sample_i;
 	long m_nInvalid;
 
-	std::vector<long> m_missing_entries;
+	std::unordered_set<long> m_missing_entries;
 	double m_sum_eij2;
 	double m_sum_fij_minus_eij2;
 	double m_eij;
