@@ -5,6 +5,7 @@
 #include "parameters.hpp"
 #include "cxxopts.hpp"
 
+#include <cassert>
 #include <iostream>
 #include <set>
 #include <cstring>
@@ -51,8 +52,7 @@ void parse_arguments(parameters &p, int argc, char **argv) {
 	    cxxopts::value<unsigned int>(p.random_seed))
 	    ("true_sigma", "Variance of gaussian noise added to simulated phenotype (default: 1). Must be greater than zero.",
 	    cxxopts::value<double>(p.sigma))
-	    ("use_raw_dosage", "Use expected dosage instead of normalising columns of the dosage matrix to mean zero and variance one.",
-	    cxxopts::value<double>(p.sigma))
+	    ("use_raw_dosage", "Use expected dosage instead of normalising columns of the dosage matrix to mean zero and variance one.")
 	    ("h, help", "")
 	;
 

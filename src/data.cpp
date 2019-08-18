@@ -166,7 +166,7 @@ void Data::read_grid_file(const std::string &filename, EigenDataMatrix &M, std::
 					std::cout << sss << " on line " << i << std::endl;
 					throw;
 				}
-				if(!std::isfinite(tmp_d)){
+				if(!std::isfinite(tmp_d)) {
 					std::cout << "WARNING: " << std::endl;
 					std::cout << "Found non-finite value " << sss << " on line " << i;
 					std::cout << " of file " << filename << std::endl;
@@ -174,7 +174,7 @@ void Data::read_grid_file(const std::string &filename, EigenDataMatrix &M, std::
 
 				M(i, k) = tmp_d;
 			}
-			i++;                                                                                                                         // loop should end at i == n_grid
+			i++;                                                                                                                                                                                                                                                                         // loop should end at i == n_grid
 		}
 		if (i < n_grid) {
 			throw std::runtime_error("ERROR: could not convert txt file (too few lines).");
@@ -210,7 +210,7 @@ void Data::read_txt_file_w_context(const std::string &filename, const int &col_o
 	// Read file twice to ascertain number of lines
 	int n_lines = 0;
 	std::string line;
-	getline(fg, line);                                         // skip header
+	getline(fg, line);                                                                                         // skip header
 	while (getline(fg, line)) {
 		n_lines++;
 	}
@@ -258,14 +258,14 @@ void Data::read_txt_file_w_context(const std::string &filename, const int &col_o
 					std::cout << " of file " << filename << std::endl;
 					throw std::runtime_error("Unexpected value");
 				}
-				if(!std::isfinite(M(i, k-col_offset))){
+				if(!std::isfinite(M(i, k-col_offset))) {
 					std::cout << "WARNING: " << std::endl;
 					std::cout << "Found non-finite value " << sss << " on line " << i;
 					std::cout << " of file " << filename << std::endl;
 				}
 			}
 		}
-		i++;                                                                                 // loop should end at i == n_samples
+		i++;                                                                                                                                                                                 // loop should end at i == n_samples
 	}
 	std::cout << n_lines << " rows found in " << filename << std::endl;
 }
@@ -377,8 +377,8 @@ void Data::reduce_to_complete_cases() {
 	incomplete_cases.insert(missing_envs.begin(), missing_envs.end());
 
 	sample_is_invalid.clear();
-	for (long ii = 0; ii < n_samples; ii++){
-		if (incomplete_cases.find(ii) == incomplete_cases.end()){
+	for (long ii = 0; ii < n_samples; ii++) {
+		if (incomplete_cases.find(ii) == incomplete_cases.end()) {
 			sample_is_invalid[ii] = false;
 		} else {
 			sample_is_invalid[ii] = true;
@@ -494,13 +494,31 @@ void Data::pred_pheno() {
 
 	// S2; genetic or interaction effects
 	Xb = EigenDataArrayX::Zero(n_samples);
+	Xg = EigenDataArrayX::Zero(n_samples);
 	Zg = EigenDataArrayX::Zero(n_samples);
 	Xb2 = EigenDataArrayX::Zero(n_samples);
+	Xg2 = EigenDataArrayX::Zero(n_samples);
 	Zg2 = EigenDataArrayX::Zero(n_samples);
 	int ch = 0;
 	long n_matched = 0;
 
 	std::cout << std::endl << "Generating predicted phenotype" << std::endl;
+	if (params.normalise_genotypes) {
+		std::cout << "- using normalised expected dosage (mean zero, variance one)" << std::endl;
+	} else {
+		std::cout << "- using raw expected dosage"<< std::endl;
+	}
+	if(params.mode_low_mem) {
+		std::cout << "- simulating low memory compression used by LEMMA" << std::endl;
+	}
+	if(n_env > 0) {
+		if (params.use_raw_env) {
+			std::cout << "- env-vector unprocessed" << std::endl;
+		} else {
+			std::cout << "- env-vector normalised to mean zero, variance one" << std::endl;
+		}
+	}
+	std::cout << std::endl;
 	while (read_bgen_chunk()) {
 		// Raw dosage read in to G
 		if(ch % 10 == 0) {
@@ -540,6 +558,7 @@ void Data::pred_pheno() {
 
 			Xb += G.col(kk).array() * B(coeff_index, 0);
 			if(n_env > 0) {
+				Xg += G.col(kk).array() * B(coeff_index, 1);
 				Zg += G.col(kk).array() * E.array() * B(coeff_index, 1);
 			}
 
@@ -548,6 +567,7 @@ void Data::pred_pheno() {
 				// Not yet implemented
 				Xb2 += G.col(kk).array() * B2(coeff_index, 0);
 				if(n_env > 0) {
+					Xg2 += G.col(kk).array() * B2(coeff_index, 1);
 					Zg2 += G.col(kk).array() * E.array() * B2(coeff_index, 1);
 				}
 			}
@@ -566,6 +586,10 @@ void Data::pred_pheno() {
 	}
 	if(match_snpkeys || match_snpids) {
 		std::cout << "- " << n_matched << " SNPs found matching those given in --coeffs" << std::endl;
+	}
+	if(n_env > 0) {
+		Zg = Xg * E.col(0).array();
+		Zg2 = Xg2 * E.col(0).array();
 	}
 	Y = Xb + Zg + Xb2 + Zg2;
 }
@@ -636,6 +660,7 @@ void Data::sim_pheno() {
 		if(n_env > 0) {
 			scalarData var_zg = var(Zg);
 			Zg       *= std::sqrt(params.sigma * sigma_g / var_zg);
+			Xg       *= std::sqrt(params.sigma * sigma_g / var_zg);
 			B.col(1) *= std::sqrt(params.sigma * sigma_g / var_zg);
 		}
 
@@ -647,6 +672,7 @@ void Data::sim_pheno() {
 			if(n_env > 0) {
 				scalarData var_zg = var(Zg2);
 				Zg2       *= std::sqrt(params.sigma * sigma_g2 / var_zg);
+				Xg2       *= std::sqrt(params.sigma * sigma_g2 / var_zg);
 				B2.col(1) *= std::sqrt(params.sigma * sigma_g2 / var_zg);
 			}
 		}
@@ -682,7 +708,7 @@ void Data::compute_correlations_chunk(EigenRefDataArrayXX dXtEEX_chunk) {
 void Data::print_keys() {
 	// Step 4; compute correlations
 	int ch = 0;
-	reduce_to_complete_cases();                                         // From read_sids!!
+	reduce_to_complete_cases();                                                                                         // From read_sids!!
 	// std::cout << "num samples: " << n_samples << std::endl;
 	while (read_bgen_chunk()) {
 		// Raw dosage read in to G
