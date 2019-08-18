@@ -46,5 +46,5 @@ bin/bgen_utils --sim_pheno \
 
 This simulates according to the model
 ```
-Y = X \beta \diag(eta) * X * \gamma + \epsilon
+Y = X \beta + \diag(eta) * X * \gamma + \epsilon
 ```
