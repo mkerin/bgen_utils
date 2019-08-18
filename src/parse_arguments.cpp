@@ -32,6 +32,7 @@ void parse_arguments(parameters &p, int argc, char **argv) {
 	    ("sim_pheno", "Simulate phenotype of form Y = X beta + epsilon", cxxopts::value<bool>(p.mode_gen_pheno))
 	    ("pred_pheno", "Predict phenotype Y = X beta", cxxopts::value<bool>(p.mode_pred_pheno))
 	    ("bgen", "Path to bgen file", cxxopts::value<std::string>(p.bgen_file))
+	    ("environment", "Path to file of environments (should contain only one column)", cxxopts::value<std::string>(p.env_file))
 	    ("coeffs", "Path to file of coefficients", cxxopts::value<std::string>(p.coeffs_file))
 	    ("out", "Filepath to output", cxxopts::value<std::string>(p.out_file))
 	    ("incl_sample_ids", "Text file of sample ids to include (no header, 1 per line)",
@@ -42,13 +43,15 @@ void parse_arguments(parameters &p, int argc, char **argv) {
 	    cxxopts::value<std::string>(p.excl_rsids_file))
 	    ("range", "Genomic range in format chr:start-end",
 	    cxxopts::value<std::string>())
-//			("maf", "Exclude SNPs with allele frequency less than <maf> or greater than (1 - <maf>)",
-//			 cxxopts::value<double>())
-//			("info", "Exclude SNPs with IMPUTE info score less than <info>",
-//			 cxxopts::value<double>())
+	    ("maf", "Exclude SNPs with allele frequency less than <maf> or greater than (1 - <maf>)",
+	    cxxopts::value<double>())
+	    ("info", "Exclude SNPs with IMPUTE info score less than <info>",
+	    cxxopts::value<double>())
 	    ("random_seed", "Seed used when simulating a phenotype (default: random)",
 	    cxxopts::value<unsigned int>(p.random_seed))
 	    ("true_sigma", "Variance of gaussian noise added to simulated phenotype (default: 1). Must be greater than zero.",
+	    cxxopts::value<double>(p.sigma))
+	    ("use_raw_dosage", "Use expected dosage instead of normalising columns of the dosage matrix to mean zero and variance one.",
 	    cxxopts::value<double>(p.sigma))
 	    ("h, help", "")
 	;
@@ -104,6 +107,10 @@ void parse_arguments(parameters &p, int argc, char **argv) {
 
 		if(opts.count("true_sigma")) {
 			assert(p.sigma > 0);
+		}
+
+		if(opts.count("use_raw_dosage")) {
+			p.normalise_genotypes = false;
 		}
 
 	} catch (const cxxopts::OptionException& e) {
