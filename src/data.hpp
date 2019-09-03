@@ -60,19 +60,19 @@ public:
 	std::vector< uint32_t > position_cum;
 	std::vector< std::vector< std::string > > alleles_cum;
 
-	int n_pheno;                                                          // number of phenotypes
-	int n_covar;                                                          // number of covariates
-	int n_samples;                                                        // number of samples
+	int n_pheno;                                                                  // number of phenotypes
+	int n_covar;                                                                  // number of covariates
+	int n_samples;                                                                // number of samples
 	int n_env;
 	long n_total_var;
 	bool bgen_pass;
 	long n_var;
-	long n_var_parsed;                                             // Track progress through IndexQuery
+	long n_var_parsed;                                                     // Track progress through IndexQuery
 	long int n_constant_variance;
 
-	bool Y_reduced;                                               // Variables to track whether we have already
-	bool W_reduced;                                               // reduced to complete cases or not.
-	bool E_reduced;                                               // reduced to complete cases or not.
+	bool Y_reduced;                                                       // Variables to track whether we have already
+	bool W_reduced;                                                       // reduced to complete cases or not.
+	bool E_reduced;                                                       // reduced to complete cases or not.
 	std::unordered_map<long, bool> sample_is_invalid;
 
 	std::vector< double > info;
@@ -81,19 +81,19 @@ public:
 	std::vector< std::string > incl_rsid_list;
 	std::vector< std::string > excl_rsid_list;
 
-	std::map<long, bool> missing_covars;                                             // set of subjects missing >= 1 covariate
-	std::map<long, bool> missing_phenos;                                             // set of subjects missing >= phenotype
-	std::map<long, bool> missing_envs;                                             // set of subjects missing >= phenotype
-	std::map<long, bool > incomplete_cases;                                             // union of samples missing data
+	std::map<long, bool> missing_covars;                                                     // set of subjects missing >= 1 covariate
+	std::map<long, bool> missing_phenos;                                                     // set of subjects missing >= phenotype
+	std::map<long, bool> missing_envs;                                                     // set of subjects missing >= phenotype
+	std::map<long, bool > incomplete_cases;                                                     // union of samples missing data
 
 	std::vector< std::string > covar_names;
 	std::vector< std::string > env_names;
 
-	EigenDataMatrix G;                                             // probabilistic genotype matrix
-	EigenDataArrayX Y;                                             // phenotype matrix
-	EigenDataMatrix W;                                             // covariate matrix
+	EigenDataMatrix G;                                                     // probabilistic genotype matrix
+	EigenDataArrayX Y;                                                     // phenotype matrix
+	EigenDataMatrix W;                                                     // covariate matrix
 	EigenDataMatrix E;
-	EigenDataMatrix B, B2;                                             // matrix of coefficients (beta, gamma)
+	EigenDataMatrix B, B2;                                                     // matrix of coefficients (beta, gamma)
 	EigenDataArrayX Xb, Xg, Zg, Xb2, Xg2, Zg2, Ealpha, Wtau, noise;
 	EigenDataMatrix env_profile;
 
@@ -131,7 +131,7 @@ public:
 		n_covar = 0;
 		n_env = 0;
 
-		match_snpkeys = false;                                                                                                  // Used when reconstructing yhat from coeffs
+		match_snpkeys = false;                                                                                                                  // Used when reconstructing yhat from coeffs
 
 		// system time at start
 		start = std::chrono::system_clock::now();
@@ -188,9 +188,9 @@ public:
 			std::string ofile_pred   = fstream_init(outf_pred, params.out_file, "_predicted_effects");
 			std::cout << "Writing predicted effects to " << ofile_pred << std::endl;
 			outf_pred << "Xbeta";
-			if(n_env > 0) {
-				outf_pred << "\teta\tXgamma" << std::endl;
-			}
+			// if(n_env > 0) {
+			outf_pred << "\teta\tXgamma";
+			// }
 			outf_pred << std::endl;
 		} else if(params.mode_gen_pheno || params.mode_gen2_pheno) {
 			std::string ofile_pred   = fstream_init(outf_pred, params.out_file, "_predicted_effects");
@@ -223,9 +223,9 @@ public:
 		} else if (params.mode_pred_pheno) {
 			for (std::size_t ii = 0; ii < n_samples; ii++) {
 				outf_pred << Xb(ii);
-				if(n_env > 0) {
-					outf_pred << "\t" << E(ii, 0) << "\t" << Xg(ii);
-				}
+				// if(n_env > 0) {
+				outf_pred << "\t" << E(ii, 0) << "\t" << Xg(ii);
+				// }
 				outf_pred << std::endl;
 			}
 
@@ -297,7 +297,7 @@ public:
 		uint32_t pos_j;
 		std::string rsid_j;
 		std::vector< std::string > alleles_j;
-		std::string SNPID_j;                                                                                                  // read but ignored
+		std::string SNPID_j;                                                                                                                  // read but ignored
 
 		long nInvalid = sample_is_invalid.size() - n_samples;
 		DosageSetter setter_v2(sample_is_invalid, nInvalid);
@@ -579,7 +579,7 @@ public:
 						incomplete_row[i] = true;
 					}
 				}
-				i++;                                                                                                                                                                                                         // loop should end at i == n_samples
+				i++;                                                                                                                                                                                                                                         // loop should end at i == n_samples
 			}
 			if (i < n_samples) {
 				throw std::runtime_error("ERROR: could not convert txt file (too few lines).");

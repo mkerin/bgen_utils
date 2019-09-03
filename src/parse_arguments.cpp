@@ -29,7 +29,7 @@ void parse_arguments(parameters &p, int argc, char **argv) {
 	                         "Includes functionality such as predicting phenotypes "
 	                         "given a file of coefficients and simulating phenotypes (ie with added noise).");
 
-	options.add_options()
+	options.add_options("General")
 	    ("sim_pheno", "Simulate phenotype of form Y = X beta + epsilon", cxxopts::value<bool>(p.mode_gen_pheno))
 	    ("pred_pheno", "Predict phenotype Y = X beta", cxxopts::value<bool>(p.mode_pred_pheno))
 	    ("bgen", "Path to bgen file", cxxopts::value<std::string>(p.bgen_file))
@@ -44,10 +44,10 @@ void parse_arguments(parameters &p, int argc, char **argv) {
 	    cxxopts::value<std::string>(p.excl_rsids_file))
 	    ("range", "Genomic range in format chr:start-end",
 	    cxxopts::value<std::string>())
-	    ("maf", "Exclude SNPs with allele frequency less than <maf> or greater than (1 - <maf>)",
-	    cxxopts::value<double>())
-	    ("info", "Exclude SNPs with IMPUTE info score less than <info>",
-	    cxxopts::value<double>())
+	// ("maf", "Exclude SNPs with allele frequency less than <maf> or greater than (1 - <maf>)",
+	// cxxopts::value<double>())
+	// ("info", "Exclude SNPs with IMPUTE info score less than <info>",
+	// cxxopts::value<double>())
 	    ("random_seed", "Seed used when simulating a phenotype (default: random)",
 	    cxxopts::value<unsigned int>(p.random_seed))
 	    ("true_sigma", "Variance of gaussian noise added to simulated phenotype (default: 1). Must be greater than zero.",
@@ -56,12 +56,16 @@ void parse_arguments(parameters &p, int argc, char **argv) {
 	    ("h, help", "")
 	;
 
+	options.add_options("Internal")
+	    ("use_raw_env", "")
+	;
+
 	try{
 		auto opts = options.parse(argc, argv);
 		auto args = opts.arguments();
 
 		if (opts.count("help") || args.empty()) {
-			std::cout << options.help({""}) << std::endl;
+			std::cout << options.help({"General"}) << std::endl;
 			std::exit(0);
 		}
 
@@ -111,6 +115,10 @@ void parse_arguments(parameters &p, int argc, char **argv) {
 
 		if(opts.count("use_raw_dosage")) {
 			p.normalise_genotypes = false;
+		}
+
+		if(opts.count("use_raw_env")) {
+			p.use_raw_env = true;
 		}
 
 	} catch (const cxxopts::OptionException& e) {
