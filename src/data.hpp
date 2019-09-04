@@ -92,6 +92,7 @@ public:
 	EigenDataMatrix B, B2;
 	EigenDataArrayX Xb, Xg, Zg, Xb2, Xg2, Zg2, Ealpha, Wtau, noise;
 	EigenDataMatrix env_profile;
+	std::vector<double> beta_vec1, beta_vec2, gamma_vec1, gamma_vec2;
 
 	std::unordered_map<std::string, long> B_SNPKEYS_map;
 	std::vector<std::string> B_SNPKEYS;

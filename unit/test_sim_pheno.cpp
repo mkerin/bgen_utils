@@ -22,7 +22,7 @@ TEST_CASE("parse commandline"){
 		             (char*) "--incl_sample_ids", (char*) "unit/data/sample_ids.txt",
 		             (char*) "--coeffs", (char*) "unit/data/sample_ids.txt",
 		             (char*) "--range", (char*) "12:13-14",
-		             (char*) "--out", (char*) "unit/data/sample_ids.txt",
+		             (char*) "--out", (char*) "unit/data/tmp.txt",
 		             (char*) "--bgen", (char*) "unit/data/n50_p100.bgen"};
 	int argc = sizeof(argv)/sizeof(argv[0]);
 	parse_arguments(p, argc, argv);
