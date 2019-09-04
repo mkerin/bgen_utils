@@ -193,6 +193,7 @@ public:
 		} else if (coeff_names == case2 || coeff_names == case2b) {
 			match_snpkeys = true;
 			read_txt_file_w_context(filename, 1, coeffs_mat, B_SNPKEYS, coeff_names);
+			B_SNPKEYS_map.clear();
 			for (long jj = 0; jj < B_SNPKEYS.size(); jj++) {
 				B_SNPKEYS_map[B_SNPKEYS[jj]] = jj;
 			}
@@ -202,6 +203,7 @@ public:
 		} else if (coeff_names == case3 || coeff_names == case3b) {
 			match_snpids = true;
 			read_txt_file_w_context(filename, 1, coeffs_mat, B_SNPIDS, coeff_names);
+			B_SNPIDS_map.clear();
 			for (long jj = 0; jj < B_SNPIDS.size(); jj++) {
 				B_SNPIDS_map[B_SNPIDS[jj]] = jj;
 			}

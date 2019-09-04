@@ -225,8 +225,7 @@ void Data::pred_pheno() {
 			}
 
 			if(params.coeffs2_file != "NULL") {
-				assert(!(match_snpkeys || match_snpids));
-				// Not yet implemented
+				// WARNING: ASSUMED THAT SNPKEYS IN COEFFS and COEFFS2 ARE IDENTICAL
 				Xb2 += G.col(kk).array() * B2(coeff_index, 0);
 				if(n_env > 0) {
 					Xg2 += G.col(kk).array() * B2(coeff_index, 1);
@@ -736,6 +735,7 @@ void Data::read_txt_file_w_context(const std::string &filename, const int &col_o
 
 	   col_offset - how many contextual columns to skip
 	 */
+	M_snpids.clear();
 
 	// Reading from file
 	boost_io::filtering_istream fg;
