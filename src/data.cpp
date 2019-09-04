@@ -158,6 +158,8 @@ void Data::pred_pheno() {
 	Xb2 = EigenDataArrayX::Zero(n_samples);
 	Xg2 = EigenDataArrayX::Zero(n_samples);
 	Zg2 = EigenDataArrayX::Zero(n_samples);
+	Wtau = EigenDataVector::Zero(n_samples);
+	Ealpha = EigenDataVector::Zero(n_samples);
 	int ch = 0;
 	long n_matched = 0;
 
@@ -272,10 +274,6 @@ void Data::sim_pheno() {
 	noise.resize(n_samples);
 	sim_gaussian_noise(noise, 1, generator);
 	noise    *= std::sqrt(params.sigma / var(noise));
-
-	// Additive main effects from --covar and --environment
-	Wtau = EigenDataVector::Zero(n_samples);
-	Ealpha = EigenDataVector::Zero(n_samples);
 
 	// target variances
 	if(params.rescale_coeffs) {
