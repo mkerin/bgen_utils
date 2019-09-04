@@ -44,10 +44,6 @@ void parse_arguments(parameters &p, int argc, char **argv) {
 	    cxxopts::value<std::string>(p.excl_rsids_file))
 	    ("range", "Genomic range in format chr:start-end",
 	    cxxopts::value<std::string>())
-	// ("maf", "Exclude SNPs with allele frequency less than <maf> or greater than (1 - <maf>)",
-	// cxxopts::value<double>())
-	// ("info", "Exclude SNPs with IMPUTE info score less than <info>",
-	// cxxopts::value<double>())
 	    ("random_seed", "Seed used when simulating a phenotype (default: random)",
 	    cxxopts::value<unsigned int>(p.random_seed))
 	    ("true_sigma", "Variance of gaussian noise added to simulated phenotype (default: 1). Must be greater than zero.",
@@ -58,6 +54,7 @@ void parse_arguments(parameters &p, int argc, char **argv) {
 
 	options.add_options("Internal")
 	    ("use_raw_env", "")
+	    ("coeffs2", "", cxxopts::value<std::string>(p.coeffs2_file))
 	;
 
 	try{

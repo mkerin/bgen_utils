@@ -58,12 +58,12 @@ public:
 		use_raw_env = false;
 		// check allele probs sum to 1 by default
 		sigma = 1;
-		hb = 0;          // trait variance explained by additive genetics
-		hg = 0;          // trait variance explained by additive GxE
-		hb2 = 0;          // trait variance explained by additive genetics
-		hg2 = 0;          // trait variance explained by additive GxE
-		hc = 0;          // trait variance explained by additive covar
-		he = 0;          // trait variance explained by additive env
+		hb = 0;                  // trait variance explained by additive genetics
+		hg = 0;                  // trait variance explained by additive GxE
+		hb2 = 0;                  // trait variance explained by additive genetics
+		hg2 = 0;                  // trait variance explained by additive GxE
+		hc = 0;                  // trait variance explained by additive covar
+		he = 0;                  // trait variance explained by additive env
 		random_seed = -1;
 	}
 

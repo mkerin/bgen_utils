@@ -29,376 +29,35 @@
 #include <stdexcept>
 
 
-template <typename EigenMat>
-EigenMat reduce_mat_to_complete_cases( EigenMat& M,
-                                       bool& matrix_reduced,
-                                       int n_cols,
-                                       std::map<long, bool > incomplete_cases ) {
-	// Remove rows contained in incomplete_cases
-	long nn = M.rows();
-	int n_incomplete;
-	EigenMat M_tmp;
-	if (matrix_reduced) {
-		throw std::runtime_error("ERROR: Trying to remove incomplete cases twice...");
-	}
+Data::Data(const parameters &my_params) : params(my_params){
+	bgenView = genfile::bgen::View::create(my_params.bgen_file);
+	bgen_pass = true;
+	n_samples = bgenView->number_of_samples();
+	n_var_parsed = 0;
+	n_total_var = 0;
+	n_constant_variance = 0;
+	n_covar = 0;
+	n_env = 0;
 
-	// Create temporary matrix of complete cases
-	n_incomplete = incomplete_cases.size();
-	M_tmp.resize(nn - n_incomplete, n_cols);
+	match_snpkeys = false;
 
-	// Fill M_tmp with non-missing entries of M
-	int ii_tmp = 0;
-	for (int ii = 0; ii < nn; ii++) {
-		if (incomplete_cases.count(ii) == 0) {
-			for (int kk = 0; kk < n_cols; kk++) {
-				M_tmp(ii_tmp, kk) = M(ii, kk);
-			}
-			ii_tmp++;
-		} else {
-			// std::cout << "Deleting row " << ii << std::endl;
-		}
-	}
-
-	// Assign new values to reference variables
-	matrix_reduced = true;
-	return M_tmp;
+	// system time at start
+	start = std::chrono::system_clock::now();
+	std::time_t start_time = std::chrono::system_clock::to_time_t(start);
+	std::cout << "Starting analysis at " << std::ctime(&start_time) << std::endl;
 }
 
+Data::~Data() {
+	// system time at end
+	auto end = std::chrono::system_clock::now();
+	std::chrono::duration<double> elapsed_seconds = end-start;
+	std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+	std::cout << "Analysis finished at " << std::ctime(&end_time);
+	std::cout << "Elapsed time: " << elapsed_seconds.count() << "s" << std::endl;
 
-
-/* Inline functions */
-
-inline size_t numRows(const Eigen::MatrixXd &A) {
-	return A.rows();
-}
-
-inline size_t numCols(const Eigen::MatrixXd &A) {
-	return A.cols();
-}
-
-inline void setCol(Eigen::MatrixXd &A, const Eigen::VectorXd &v, size_t col) {
-	assert(numRows(v) == numRows(A));
-	A.col(col) = v;
-}
-
-inline Eigen::VectorXd getCol(const Eigen::MatrixXd &A, size_t col) {
-	return A.col(col);
-}
-
-inline Eigen::MatrixXd solve(const Eigen::MatrixXd &A, const Eigen::MatrixXd &b) {
-	Eigen::MatrixXd x = A.colPivHouseholderQr().solve(b);
-	if (fabs((double)((A * x - b).norm()/b.norm())) > 1e-8) {
-		std::cout << "ERROR: could not solve covariate scatter matrix." << std::endl;
-		std::exit(EXIT_FAILURE);
-	}
-	return x;
-}
-
-inline scalarData var(const EigenDataArrayX& vv){
-	scalarData res = (vv - vv.mean()).square().sum();
-	res /= ((scalarData) vv.rows() - 1.0);
-	return res;
-}
-
-void sim_gaussian_noise(EigenRefDataArrayX vv, const double& sigma_sq, std::mt19937& generator){
-	std::normal_distribution<scalarData> gaussian(0.0, std::sqrt(sigma_sq));
-	long nrows = vv.rows();
-	for (long ii = 0; ii < nrows; ii++) {
-		vv(ii) = gaussian(generator);
-	}
-}
-
-void Data::read_grid_file(const std::string &filename, EigenDataMatrix &M, std::vector<std::string> &col_names) {
-	// Used in mode_vb only.
-	// Slightly different from read_txt_file in that I don't know
-	// how many rows there will be and we can assume no missing values.
-
-	boost_io::filtering_istream fg;
-	fg.push(boost_io::file_source(filename));
-	if (!fg) {
-		std::cout << "ERROR: " << filename << " not opened." << std::endl;
-		std::exit(EXIT_FAILURE);
-	}
-
-	// Read file twice to acertain number of lines
-	std::string line;
-	int n_grid = 0;
-	getline(fg, line);
-	while (getline(fg, line)) {
-		n_grid++;
-	}
-	fg.reset();
-	fg.push(boost_io::file_source(filename));
-
-	// Reading column names
-	if (!getline(fg, line)) {
-		std::cout << "ERROR: " << filename << " not read." << std::endl;
-		std::exit(EXIT_FAILURE);
-	}
-	std::stringstream ss;
-	std::string s;
-	int n_cols = 0;
-	ss.clear();
-	ss.str(line);
-	while (ss >> s) {
-		++n_cols;
-		col_names.push_back(s);
-	}
-	std::cout << " Reading matrix of size " << n_grid << " x " << n_cols << " from " << filename << std::endl;
-
-	// Write remainder of file to Eigen matrix M
-	M.resize(n_grid, n_cols);
-	int i = 0;
-	double tmp_d;
-	try {
-		while (getline(fg, line)) {
-			if (i >= n_grid) {
-				throw std::runtime_error("ERROR: could not convert txt file (too many lines).");
-			}
-			ss.clear();
-			ss.str(line);
-			for (int k = 0; k < n_cols; k++) {
-				std::string sss;
-				ss >> sss;
-				try{
-					tmp_d = stod(sss);
-				} catch (const std::invalid_argument &exc) {
-					std::cout << sss << " on line " << i << std::endl;
-					throw;
-				}
-				if(!std::isfinite(tmp_d)) {
-					std::cout << "WARNING: " << std::endl;
-					std::cout << "Found non-finite value " << sss << " on line " << i;
-					std::cout << " of file " << filename << std::endl;
-				}
-
-				M(i, k) = tmp_d;
-			}
-			i++;                                                                                                                                                                                                                                                                         // loop should end at i == n_grid
-		}
-		if (i < n_grid) {
-			throw std::runtime_error("ERROR: could not convert txt file (too few lines).");
-		}
-	} catch (const std::exception &exc) {
-		throw;
-	}
-}
-
-void Data::read_txt_file_w_context(const std::string &filename, const int &col_offset, EigenDataMatrix &M,
-                                   std::vector<std::string> &M_snpids, std::vector<std::string> &col_names) {
-	/*
-	   Txt file where the first column is snp ids, then x-1 contextual,
-	   then a matrix to be read into memory.
-
-	   Reads file twice to ascertain number of lines.
-
-	   col_offset - how many contextual columns to skip
-	 */
-
-	// Reading from file
-	boost_io::filtering_istream fg;
-	std::string gz_str = ".gz";
-	if (filename.find(gz_str) != std::string::npos) {
-		fg.push(boost_io::gzip_decompressor());
-	}
-	fg.push(boost_io::file_source(filename));
-	if (!fg) {
-		std::cout << "ERROR: " << filename << " not opened." << std::endl;
-		std::exit(EXIT_FAILURE);
-	}
-
-	// Read file twice to ascertain number of lines
-	int n_lines = 0;
-	std::string line;
-	getline(fg, line);                                                                                         // skip header
-	while (getline(fg, line)) {
-		n_lines++;
-	}
-	fg.reset();
-	if (filename.find(gz_str) != std::string::npos) {
-		fg.push(boost_io::gzip_decompressor());
-	}
-	fg.push(boost_io::file_source(filename));
-
-	// Reading column names
-	if (!getline(fg, line)) {
-		std::cout << "ERROR: " << filename << " contains zero lines" << std::endl;
-		std::exit(EXIT_FAILURE);
-	}
-	std::stringstream ss;
-	std::string s;
-	int n_cols = 0;
-	col_names.clear();
-	ss.clear();
-	ss.str(line);
-	while (ss >> s) {
-		++n_cols;
-		col_names.push_back(s);
-	}
-	assert(n_cols > col_offset);
-
-	// Write remainder of file to Eigen matrix M
-	M.resize(n_lines, n_cols - col_offset);
-	int i = 0;
-	double tmp_d;
-	while (getline(fg, line)) {
-		ss.clear();
-		ss.str(line);
-		for (int k = 0; k < n_cols; k++) {
-			std::string sss;
-			ss >> sss;
-			if (k == 0) {
-				M_snpids.push_back(sss);
-			}
-			if (k >= col_offset) {
-				try{
-					M(i, k-col_offset) = stod(sss);
-				} catch (const std::invalid_argument &exc) {
-					std::cout << "Found value " << sss << " on line " << i;
-					std::cout << " of file " << filename << std::endl;
-					throw std::runtime_error("Unexpected value");
-				}
-				if(!std::isfinite(M(i, k-col_offset))) {
-					std::cout << "WARNING: " << std::endl;
-					std::cout << "Found non-finite value " << sss << " on line " << i;
-					std::cout << " of file " << filename << std::endl;
-				}
-			}
-		}
-		i++;                                                                                                                                                                                 // loop should end at i == n_samples
-	}
-	std::cout << n_lines << " rows found in " << filename << std::endl;
-}
-
-void Data::center_matrix(EigenDataMatrix &M, int &n_cols) {
-	// Center eigen matrix passed by reference.
-	// Only call on matrixes which have been reduced to complete cases,
-	// as no check for incomplete rows.
-
-	std::vector<size_t> keep;
-	for (int k = 0; k < n_cols; k++) {
-		double mu = 0.0;
-		double count = 0;
-		for (int i = 0; i < n_samples; i++) {
-			mu += M(i, k);
-			count += 1;
-		}
-
-		mu = mu / count;
-		for (int i = 0; i < n_samples; i++) {
-			M(i, k) -= mu;
-		}
-		// std::cout << "Mean centered matrix:" << std::endl << M << std::endl;
-	}
-}
-
-void Data::scale_matrix(EigenDataMatrix &M, int &n_cols, std::vector<std::string> &col_names) {
-	// Scale eigen matrix passed by reference.
-	// Removes columns with zero variance + updates col_names.
-	// Only call on matrixes which have been reduced to complete cases,
-	// as no check for incomplete rows.
-
-	std::vector<size_t> keep;
-	std::vector<std::string> keep_names;
-	std::vector<std::string> reject_names;
-	for (int k = 0; k < n_cols; k++) {
-		double sigma = 0.0;
-		double count = 0;
-		for (int i = 0; i < n_samples; i++) {
-			double val = M(i, k);
-			sigma += val * val;
-			count += 1;
-		}
-
-		sigma = sqrt(sigma/(count - 1));
-		if (sigma > 1e-12) {
-			for (int i = 0; i < n_samples; i++) {
-				M(i, k) /= sigma;
-			}
-			keep.push_back(k);
-			keep_names.push_back(col_names[k]);
-		} else {
-			reject_names.push_back(col_names[k]);
-		}
-	}
-
-	if (keep.size() != n_cols) {
-		n_constant_variance += (n_cols - keep.size());
-		// std::cout << " Removing " << (n_cols - keep.size())  << " column(s) with zero variance:" << std::endl;
-		// for(int kk = 0; kk < (n_cols - keep.size()); kk++){
-		//  std::cout << reject_names[kk] << std::endl;
-		// }
-//			M = getCols(M, keep);
-		for (std::size_t i = 0; i < keep.size(); i++) {
-			M.col(i) = M.col(keep[i]);
-		}
-		M.conservativeResize(M.rows(), keep.size());
-
-		n_cols = keep.size();
-		col_names = keep_names;
-	}
-
-	if (n_cols == 0) {
-		std::cout << "WARNING: No columns left with nonzero variance after scale_matrix()" << std::endl;
-	}
-}
-
-void Data::scale_matrix_conserved(EigenDataMatrix &M, int &n_cols) {
-	// Scale eigen matrix passed by reference.
-	// Does not remove columns with zero variance.
-	// Only call on matrixes which have been reduced to complete cases,
-	// as no check for incomplete rows.
-
-	for (int k = 0; k < n_cols; k++) {
-		double sigma = 0.0;
-		double count = 0;
-		for (int i = 0; i < n_samples; i++) {
-			double val = M(i, k);
-			sigma += val * val;
-			count += 1;
-		}
-
-		sigma = sqrt(sigma/(count - 1));
-		if (sigma > 1e-12) {
-			for (int i = 0; i < n_samples; i++) {
-				M(i, k) /= sigma;
-			}
-		}
-	}
-}
-
-void Data::reduce_to_complete_cases() {
-	// Remove any samples with incomplete covariates or phenotypes from
-	// Y and W.
-	// Note; other functions (eg. read_incl_sids) may add to incomplete_cases
-	// Note; during unit testing sometimes only phenos or covars present.
-
-	incomplete_cases.insert(missing_covars.begin(), missing_covars.end());
-	incomplete_cases.insert(missing_envs.begin(), missing_envs.end());
-
-	sample_is_invalid.clear();
-	for (long ii = 0; ii < n_samples; ii++) {
-		if (incomplete_cases.find(ii) == incomplete_cases.end()) {
-			sample_is_invalid[ii] = false;
-		} else {
-			sample_is_invalid[ii] = true;
-		}
-	}
-
-	if(n_covar > 0) {
-		W = reduce_mat_to_complete_cases( W, W_reduced, n_covar, incomplete_cases );
-	}
-	if(n_env > 0) {
-		E = reduce_mat_to_complete_cases( E, E_reduced, n_env, incomplete_cases );
-	}
-	n_samples -= incomplete_cases.size();
-	missing_phenos.clear();
-	missing_covars.clear();
-	missing_envs.clear();
-
-	if(!incomplete_cases.empty()) {
-		std::cout << "Reduced to " << n_samples << " samples with complete data." << std::endl;
-	}
+	boost_io::close(outf);
+	boost_io::close(outf_pred);
+	boost_io::close(outf_coeffs);
 }
 
 void Data::calc_ssv() {
@@ -689,6 +348,599 @@ void Data::sim_pheno() {
 	std::cout << "Noise has variance: " << params.sigma << std::endl;
 }
 
+void Data::output_init() {
+	std::string ofile      = fstream_init(outf, params.out_file, "");
+
+
+	// Output header for ssv file
+	if(params.mode_ssv) {
+		std::cout << "Writing ssv stats to " << ofile << std::endl;
+		outf << "s_x\ts_z\tn\tp" << std::endl;
+	} else if (params.mode_pred_pheno) {
+		std::cout << "Writing predicted phenotype to " << ofile << std::endl;
+		outf << "y" << std::endl;
+
+		std::string ofile_pred   = fstream_init(outf_pred, params.out_file, "_predicted_effects");
+		std::cout << "Writing predicted effects to " << ofile_pred << std::endl;
+		outf_pred << "Xbeta\teta\tXgamma\tZgamma" << std::endl;
+
+	} else if(params.mode_gen_pheno || params.mode_gen2_pheno) {
+		std::string ofile_pred   = fstream_init(outf_pred, params.out_file, "_predicted_effects");
+
+		std::cout << "Writing predicted effects to " << ofile_pred << std::endl;
+		outf_pred << "Wtau\tEalpha\tXbeta\teta\tXgamma\tZgamma\tnoise" << std::endl;
+
+		if(params.sim_w_noise) {
+			std::cout << "Writing simulated phenotype to " << ofile << std::endl;
+			outf << "y" << std::endl;
+		}
+
+		std::string ofile_coeffs = fstream_init(outf_coeffs, params.out_file, "_true_rescaled_coeffs");
+		std::cout << "Writing rescaled coeffs to " << ofile_coeffs << std::endl;
+		outf_coeffs << "chr rsid pos a0 a1 af beta gamma" << std::endl;
+
+	} else if (params.mode_compute_correlations) {
+		std::cout << "Writing snp-environment correlations to " << ofile << std::endl;
+	} else if (params.mode_print_keys) {
+		std::cout << "Writing snp-keys to " << ofile << std::endl;
+		outf << "SNPID chr rsid pos a0 a1 maf info" << std::endl;
+	}
+}
+
+void Data::output_results() {
+	if(params.mode_ssv) {
+		outf << s_x << "\t" << s_z << "\t" << n_samples << "\t";
+		outf << n_total_var << std::endl;
+	} else if (params.mode_pred_pheno) {
+		for (std::size_t ii = 0; ii < n_samples; ii++) {
+			outf_pred << Xb(ii) "\t" << E(ii, 0) << "\t" << Xg(ii);
+			outf_pred << "\t" << Xg(ii) * E(ii, 0) << std::endl;
+		}
+
+		for (std::size_t ii = 0; ii < n_samples; ii++) {
+			outf << Y(ii) << std::endl;
+		}
+	} else if(params.mode_gen_pheno || params.mode_gen2_pheno) {
+		for (std::size_t ii = 0; ii < n_samples; ii++) {
+			outf_pred << Wtau(ii) <<"\t" << Ealpha(ii) <<"\t" << Xb(ii) << "\t" << E(ii, 0);
+			outf_pred << "\t" << Xg(ii) << "\t" << Xg(ii) * E(ii, 0) << "\t" << noise(ii) << std::endl;
+		}
+
+		for (std::size_t ii = 0; ii < n_samples; ii++) {
+			outf << Y(ii) << std::endl;
+		}
+
+		for (std::size_t ii = 0; ii < n_total_var; ii++) {
+			outf_coeffs << chromosome_cum[ii] << " " << rsid_cum[ii] << " " << position_cum[ii];
+			outf_coeffs << " " << alleles_cum[ii][0] << " " << alleles_cum[ii][1];
+			outf_coeffs << " " << maf_cum[ii] << " " << B(ii, 0) << " " << B(ii, 1) << std::endl;
+		}
+	}
+
+	if(params.print_causal_rsids) {
+		std::string ofile_coeffs;
+		ofile_coeffs = fstream_init(outf_coeffs, params.out_file, "_nonzero_beta_rsids");
+		std::cout << "Writing rsids of nonzero betas to " << ofile_coeffs << std::endl;
+		for (std::size_t ii = 0; ii < n_total_var; ii++) {
+			if(std::abs(B(ii, 0)) > 1e-6) {
+				outf_coeffs << rsid_cum[ii] << std::endl;
+			}
+		}
+
+		ofile_coeffs = fstream_init(outf_coeffs, params.out_file, "_nonzero_gamma_rsids");
+		std::cout << "Writing rsids of nonzero gammas to " << ofile_coeffs << std::endl;
+		for (std::size_t ii = 0; ii < n_total_var; ii++) {
+			if(std::abs(B(ii, 1)) > 1e-6) {
+				outf_coeffs << rsid_cum[ii] << std::endl;
+			}
+		}
+	}
+}
+
+bool Data::read_bgen_chunk() {
+	// Wrapper around BgenView to read in a 'chunk' of data. Remembers
+	// if last call hit the EOF, and returns false if so.
+	// Assumed that:
+	// - commandline args parsed and passed to params
+	// - bgenView initialised with correct filename
+	// - scale + centering happening internally
+
+	// Exit function if last call hit EOF.
+	if (!bgen_pass) return false;
+
+	// Temporary variables to store info from read_variant()
+	std::string chr_j;
+	uint32_t pos_j;
+	std::string rsid_j;
+	std::vector< std::string > alleles_j;
+	std::string SNPID_j;
+
+	long nInvalid = sample_is_invalid.size() - n_samples;
+	DosageSetter setter_v2(sample_is_invalid, nInvalid);
+
+	double chunk_missingness = 0;
+	long n_var_incomplete = 0;
+
+	// Wipe variant context from last chunk
+	maf.clear();
+	info.clear();
+	rsid.clear();
+	chromosome.clear();
+	position.clear();
+	alleles.clear();
+	SNPKEYS.clear();
+	SNPID.clear();
+
+	// Resize genotype matrix
+	G.resize(n_samples, params.chunk_size);
+
+	long jj = 0;
+	while ( jj < params.chunk_size && bgen_pass ) {
+		bgen_pass = bgenView->read_variant(&SNPID_j, &rsid_j, &chr_j, &pos_j, &alleles_j);
+		if (!bgen_pass) break;
+		n_var_parsed++;
+
+		// Read probs + check maf filter
+		bgenView->read_genotype_data_block( setter_v2 );
+
+		double d1     = setter_v2.m_sum_eij;
+		double maf_j  = setter_v2.m_maf;
+		double info_j = setter_v2.m_info;
+		double mu     = setter_v2.m_mean;
+		double missingness_j    = setter_v2.m_missingness;
+		double sigma = std::sqrt(setter_v2.m_sigma2);
+		long valid_count = n_samples;
+		EigenDataArrayX dosage_j = setter_v2.m_dosage;
+
+		// Filters
+		if (params.maf_lim && (maf_j < params.min_maf || maf_j > 1 - params.min_maf)) {
+			continue;
+		}
+		if (params.info_lim && info_j < params.min_info) {
+			continue;
+		}
+		if(!params.keep_constant_variants && d1 < 5.0) {
+			n_constant_variance++;
+			continue;
+		}
+		if(!params.keep_constant_variants && sigma <= 1e-12) {
+			n_constant_variance++;
+			continue;
+		}
+		if(!std::isfinite(mu) || !std::isfinite(sigma)) {
+			std::cout << "WARNING: non-finite mean / variance detected for SNP with:" <<std::endl;
+			std::cout << "SNPID: " << SNPID_j << std::endl;
+			std::cout << "RSID: " << rsid_j << std::endl;
+		}
+
+		// filters passed; write contextual info
+		chunk_missingness += missingness_j;
+		if(missingness_j > 0) n_var_incomplete++;
+
+		maf.push_back(maf_j);
+		info.push_back(info_j);
+		rsid.push_back(rsid_j);
+		chromosome.push_back(chr_j);
+		position.push_back(pos_j);
+		alleles.push_back(alleles_j);
+		SNPID.push_back(SNPID_j);
+
+		std::string key_j = gen_snpkey(chr_j, pos_j, alleles_j);
+		SNPKEYS.push_back(key_j);
+		if(params.mode_print_keys) {
+			jj++;
+			continue;
+		}
+
+		if(params.mode_low_mem) {
+			double L = 2.0;
+			double intervalWidth = L / 256.0;
+			double invIntervalWidth = 256.0 / L;
+
+			// Compress
+			Eigen::Array<unsigned char, Eigen::Dynamic, 1> M_j(n_samples);
+			for (std::uint32_t ii = 0; ii < n_samples; ii++) {
+				M_j[ii] = std::floor(std::min(dosage_j[ii], (scalarData) (L - 1e-6)) * invIntervalWidth);
+			}
+			// Decompress
+			dosage_j = (M_j.cast<scalarData>() + 0.5) * intervalWidth;
+
+			mu    = dosage_j.mean();
+			sigma = (dosage_j - mu).square().sum();
+			sigma = std::sqrt(sigma/(valid_count - 1.0));
+		}
+
+		if(params.normalise_genotypes) {
+			dosage_j -= mu;
+			dosage_j /= sigma;
+		}
+		G.col(jj) = dosage_j;
+
+		jj++;
+	}
+
+	// need to resize G whilst retaining existing coefficients if while
+	// loop exits early due to EOF.
+	G.conservativeResize(n_samples, jj);
+	assert( rsid.size() == jj );
+	assert( chromosome.size() == jj );
+	assert( position.size() == jj );
+	assert( alleles.size() == jj );
+	n_var = jj;
+
+	chunk_missingness /= jj;
+	if(chunk_missingness > 0.0) {
+		std::cout << "Mean chunk missingness " << chunk_missingness << "(";
+		std::cout << n_var_incomplete << "/" << n_var;
+		std::cout << " variants contain >=1 imputed entry)" << std::endl;
+	}
+
+	maf_cum.insert(maf_cum.end(),               maf.begin(), maf.end());
+	rsid_cum.insert(rsid_cum.end(),             rsid.begin(), rsid.end());
+	chromosome_cum.insert(chromosome_cum.end(), chromosome.begin(), chromosome.end());
+	position_cum.insert(position_cum.end(),     position.begin(), position.end());
+	alleles_cum.insert(alleles_cum.end(),       alleles.begin(), alleles.end());
+
+	if(jj == 0) {
+		// Immediate EOF
+		return false;
+	} else {
+		return true;
+	}
+}
+
+template <typename EigenMat>
+EigenMat reduce_mat_to_complete_cases( EigenMat& M,
+                                       bool& matrix_reduced,
+                                       int n_cols,
+                                       std::map<long, bool > incomplete_cases ) {
+	// Remove rows contained in incomplete_cases
+	long nn = M.rows();
+	int n_incomplete;
+	EigenMat M_tmp;
+	if (matrix_reduced) {
+		throw std::runtime_error("ERROR: Trying to remove incomplete cases twice...");
+	}
+
+	// Create temporary matrix of complete cases
+	n_incomplete = incomplete_cases.size();
+	M_tmp.resize(nn - n_incomplete, n_cols);
+
+	// Fill M_tmp with non-missing entries of M
+	int ii_tmp = 0;
+	for (int ii = 0; ii < nn; ii++) {
+		if (incomplete_cases.count(ii) == 0) {
+			for (int kk = 0; kk < n_cols; kk++) {
+				M_tmp(ii_tmp, kk) = M(ii, kk);
+			}
+			ii_tmp++;
+		} else {
+			// std::cout << "Deleting row " << ii << std::endl;
+		}
+	}
+
+	// Assign new values to reference variables
+	matrix_reduced = true;
+	return M_tmp;
+}
+
+
+inline Eigen::MatrixXd solve(const Eigen::MatrixXd &A, const Eigen::MatrixXd &b) {
+	Eigen::MatrixXd x = A.colPivHouseholderQr().solve(b);
+	if (fabs((double)((A * x - b).norm()/b.norm())) > 1e-8) {
+		std::cout << "ERROR: could not solve covariate scatter matrix." << std::endl;
+		std::exit(EXIT_FAILURE);
+	}
+	return x;
+}
+
+inline scalarData var(const EigenDataArrayX& vv){
+	scalarData res = (vv - vv.mean()).square().sum();
+	res /= ((scalarData) vv.rows() - 1.0);
+	return res;
+}
+
+void sim_gaussian_noise(EigenRefDataArrayX vv, const double& sigma_sq, std::mt19937& generator){
+	std::normal_distribution<scalarData> gaussian(0.0, std::sqrt(sigma_sq));
+	long nrows = vv.rows();
+	for (long ii = 0; ii < nrows; ii++) {
+		vv(ii) = gaussian(generator);
+	}
+}
+
+void Data::read_grid_file(const std::string &filename, EigenDataMatrix &M, std::vector<std::string> &col_names) {
+	// Used in mode_vb only.
+	// Slightly different from read_txt_file in that I don't know
+	// how many rows there will be and we can assume no missing values.
+
+	boost_io::filtering_istream fg;
+	fg.push(boost_io::file_source(filename));
+	if (!fg) {
+		std::cout << "ERROR: " << filename << " not opened." << std::endl;
+		std::exit(EXIT_FAILURE);
+	}
+
+	// Read file twice to acertain number of lines
+	std::string line;
+	int n_grid = 0;
+	getline(fg, line);
+	while (getline(fg, line)) {
+		n_grid++;
+	}
+	fg.reset();
+	fg.push(boost_io::file_source(filename));
+
+	// Reading column names
+	if (!getline(fg, line)) {
+		std::cout << "ERROR: " << filename << " not read." << std::endl;
+		std::exit(EXIT_FAILURE);
+	}
+	std::stringstream ss;
+	std::string s;
+	int n_cols = 0;
+	ss.clear();
+	ss.str(line);
+	while (ss >> s) {
+		++n_cols;
+		col_names.push_back(s);
+	}
+	std::cout << " Reading matrix of size " << n_grid << " x " << n_cols << " from " << filename << std::endl;
+
+	// Write remainder of file to Eigen matrix M
+	M.resize(n_grid, n_cols);
+	int i = 0;
+	double tmp_d;
+	try {
+		while (getline(fg, line)) {
+			if (i >= n_grid) {
+				throw std::runtime_error("ERROR: could not convert txt file (too many lines).");
+			}
+			ss.clear();
+			ss.str(line);
+			for (int k = 0; k < n_cols; k++) {
+				std::string sss;
+				ss >> sss;
+				try{
+					tmp_d = stod(sss);
+				} catch (const std::invalid_argument &exc) {
+					std::cout << sss << " on line " << i << std::endl;
+					throw;
+				}
+				if(!std::isfinite(tmp_d)) {
+					std::cout << "WARNING: " << std::endl;
+					std::cout << "Found non-finite value " << sss << " on line " << i;
+					std::cout << " of file " << filename << std::endl;
+				}
+
+				M(i, k) = tmp_d;
+			}
+			i++;
+		}
+		if (i < n_grid) {
+			throw std::runtime_error("ERROR: could not convert txt file (too few lines).");
+		}
+	} catch (const std::exception &exc) {
+		throw;
+	}
+}
+
+void Data::read_txt_file_w_context(const std::string &filename, const int &col_offset, EigenDataMatrix &M,
+                                   std::vector<std::string> &M_snpids, std::vector<std::string> &col_names) {
+	/*
+	   Txt file where the first column is snp ids, then x-1 contextual,
+	   then a matrix to be read into memory.
+
+	   Reads file twice to ascertain number of lines.
+
+	   col_offset - how many contextual columns to skip
+	 */
+
+	// Reading from file
+	boost_io::filtering_istream fg;
+	std::string gz_str = ".gz";
+	if (filename.find(gz_str) != std::string::npos) {
+		fg.push(boost_io::gzip_decompressor());
+	}
+	fg.push(boost_io::file_source(filename));
+	if (!fg) {
+		std::cout << "ERROR: " << filename << " not opened." << std::endl;
+		std::exit(EXIT_FAILURE);
+	}
+
+	// Read file twice to ascertain number of lines
+	int n_lines = 0;
+	std::string line;
+	getline(fg, line);
+	while (getline(fg, line)) {
+		n_lines++;
+	}
+	fg.reset();
+	if (filename.find(gz_str) != std::string::npos) {
+		fg.push(boost_io::gzip_decompressor());
+	}
+	fg.push(boost_io::file_source(filename));
+
+	// Reading column names
+	if (!getline(fg, line)) {
+		std::cout << "ERROR: " << filename << " contains zero lines" << std::endl;
+		std::exit(EXIT_FAILURE);
+	}
+	std::stringstream ss;
+	std::string s;
+	int n_cols = 0;
+	col_names.clear();
+	ss.clear();
+	ss.str(line);
+	while (ss >> s) {
+		++n_cols;
+		col_names.push_back(s);
+	}
+	assert(n_cols > col_offset);
+
+	// Write remainder of file to Eigen matrix M
+	M.resize(n_lines, n_cols - col_offset);
+	int i = 0;
+	double tmp_d;
+	while (getline(fg, line)) {
+		ss.clear();
+		ss.str(line);
+		for (int k = 0; k < n_cols; k++) {
+			std::string sss;
+			ss >> sss;
+			if (k == 0) {
+				M_snpids.push_back(sss);
+			}
+			if (k >= col_offset) {
+				try{
+					M(i, k-col_offset) = stod(sss);
+				} catch (const std::invalid_argument &exc) {
+					std::cout << "Found value " << sss << " on line " << i;
+					std::cout << " of file " << filename << std::endl;
+					throw std::runtime_error("Unexpected value");
+				}
+				if(!std::isfinite(M(i, k-col_offset))) {
+					std::cout << "WARNING: " << std::endl;
+					std::cout << "Found non-finite value " << sss << " on line " << i;
+					std::cout << " of file " << filename << std::endl;
+				}
+			}
+		}
+		i++;
+	}
+	std::cout << n_lines << " rows found in " << filename << std::endl;
+}
+
+void Data::center_matrix(EigenDataMatrix &M, int &n_cols) {
+	// Center eigen matrix passed by reference.
+	// Only call on matrixes which have been reduced to complete cases,
+	// as no check for incomplete rows.
+
+	std::vector<size_t> keep;
+	for (int k = 0; k < n_cols; k++) {
+		double mu = 0.0;
+		double count = 0;
+		for (int i = 0; i < n_samples; i++) {
+			mu += M(i, k);
+			count += 1;
+		}
+
+		mu = mu / count;
+		for (int i = 0; i < n_samples; i++) {
+			M(i, k) -= mu;
+		}
+		// std::cout << "Mean centered matrix:" << std::endl << M << std::endl;
+	}
+}
+
+void Data::scale_matrix(EigenDataMatrix &M, int &n_cols, std::vector<std::string> &col_names) {
+	// Scale eigen matrix passed by reference.
+	// Removes columns with zero variance + updates col_names.
+	// Only call on matrixes which have been reduced to complete cases,
+	// as no check for incomplete rows.
+
+	std::vector<size_t> keep;
+	std::vector<std::string> keep_names;
+	std::vector<std::string> reject_names;
+	for (int k = 0; k < n_cols; k++) {
+		double sigma = 0.0;
+		double count = 0;
+		for (int i = 0; i < n_samples; i++) {
+			double val = M(i, k);
+			sigma += val * val;
+			count += 1;
+		}
+
+		sigma = sqrt(sigma/(count - 1));
+		if (sigma > 1e-12) {
+			for (int i = 0; i < n_samples; i++) {
+				M(i, k) /= sigma;
+			}
+			keep.push_back(k);
+			keep_names.push_back(col_names[k]);
+		} else {
+			reject_names.push_back(col_names[k]);
+		}
+	}
+
+	if (keep.size() != n_cols) {
+		n_constant_variance += (n_cols - keep.size());
+		// std::cout << " Removing " << (n_cols - keep.size())  << " column(s) with zero variance:" << std::endl;
+		// for(int kk = 0; kk < (n_cols - keep.size()); kk++){
+		//  std::cout << reject_names[kk] << std::endl;
+		// }
+//			M = getCols(M, keep);
+		for (std::size_t i = 0; i < keep.size(); i++) {
+			M.col(i) = M.col(keep[i]);
+		}
+		M.conservativeResize(M.rows(), keep.size());
+
+		n_cols = keep.size();
+		col_names = keep_names;
+	}
+
+	if (n_cols == 0) {
+		std::cout << "WARNING: No columns left with nonzero variance after scale_matrix()" << std::endl;
+	}
+}
+
+void Data::scale_matrix_conserved(EigenDataMatrix &M, int &n_cols) {
+	// Scale eigen matrix passed by reference.
+	// Does not remove columns with zero variance.
+	// Only call on matrixes which have been reduced to complete cases,
+	// as no check for incomplete rows.
+
+	for (int k = 0; k < n_cols; k++) {
+		double sigma = 0.0;
+		double count = 0;
+		for (int i = 0; i < n_samples; i++) {
+			double val = M(i, k);
+			sigma += val * val;
+			count += 1;
+		}
+
+		sigma = sqrt(sigma/(count - 1));
+		if (sigma > 1e-12) {
+			for (int i = 0; i < n_samples; i++) {
+				M(i, k) /= sigma;
+			}
+		}
+	}
+}
+
+void Data::reduce_to_complete_cases() {
+	// Remove any samples with incomplete covariates or phenotypes from
+	// Y and W.
+	// Note; other functions (eg. read_incl_sids) may add to incomplete_cases
+	// Note; during unit testing sometimes only phenos or covars present.
+
+	incomplete_cases.insert(missing_covars.begin(), missing_covars.end());
+	incomplete_cases.insert(missing_envs.begin(), missing_envs.end());
+
+	sample_is_invalid.clear();
+	for (long ii = 0; ii < n_samples; ii++) {
+		if (incomplete_cases.find(ii) == incomplete_cases.end()) {
+			sample_is_invalid[ii] = false;
+		} else {
+			sample_is_invalid[ii] = true;
+		}
+	}
+
+	if(n_covar > 0) {
+		W = reduce_mat_to_complete_cases( W, W_reduced, n_covar, incomplete_cases );
+	}
+	if(n_env > 0) {
+		E = reduce_mat_to_complete_cases( E, E_reduced, n_env, incomplete_cases );
+	}
+	n_samples -= incomplete_cases.size();
+	missing_phenos.clear();
+	missing_covars.clear();
+	missing_envs.clear();
+
+	if(!incomplete_cases.empty()) {
+		std::cout << "Reduced to " << n_samples << " samples with complete data." << std::endl;
+	}
+}
+
 void Data::compute_correlations_chunk(EigenRefDataArrayXX dXtEEX_chunk) {
 	assert(dXtEEX_chunk.rows() == n_var);
 	assert(dXtEEX_chunk.cols() == n_env * n_env);
@@ -708,7 +960,7 @@ void Data::compute_correlations_chunk(EigenRefDataArrayXX dXtEEX_chunk) {
 void Data::print_keys() {
 	// Step 4; compute correlations
 	int ch = 0;
-	reduce_to_complete_cases();                                                                                         // From read_sids!!
+	reduce_to_complete_cases();
 	// std::cout << "num samples: " << n_samples << std::endl;
 	while (read_bgen_chunk()) {
 		// Raw dosage read in to G
@@ -802,4 +1054,49 @@ void Data::regress_first_mat_from_second(const EigenDataMatrix &A, const std::st
 
 	Eigen::MatrixXd bb = solve(AtA, Aty);
 	yy -= A * bb.cast<scalarData>();
+}
+
+std::string Data::fstream_init(boost_io::filtering_ostream &my_outf, const std::string &orig_file_path,
+                               const std::string &file_suffix) {
+
+	std::string filepath   = orig_file_path;
+	std::string dir        = filepath.substr(0, filepath.rfind('/')+1);
+	std::string stem_w_dir = filepath.substr(0, filepath.find('.'));
+	std::string stem       = stem_w_dir.substr(stem_w_dir.rfind('/')+1, stem_w_dir.size());
+	std::string ext        = filepath.substr(filepath.find('.'), filepath.size());
+
+	std::string ofile      = dir + stem + file_suffix + ext;
+
+	my_outf.reset();
+	std::string gz_str = ".gz";
+	if (orig_file_path.find(gz_str) != std::string::npos) {
+		my_outf.push(boost_io::gzip_compressor());
+	}
+	my_outf.push(boost_io::file_sink(ofile));
+	return ofile;
+}
+
+
+void Data::read_rsids(const std::string &filename, std::vector<std::string> &rsid_list) {
+	rsid_list.clear();
+	boost_io::filtering_istream fg;
+	fg.push(boost_io::file_source(params.incl_rsids_file));
+	if (!fg) {
+		std::cout << "ERROR: " << params.incl_rsids_file << " not opened." << std::endl;
+		std::exit(EXIT_FAILURE);
+	}
+
+	std::stringstream ss;
+	std::string line;
+	while (getline(fg, line)) {
+		ss.clear();
+		ss.str(line);
+		std::string s;
+		while(ss >> s) {
+			rsid_list.push_back(s);
+		}
+	}
+
+	std::sort(rsid_list.begin(), rsid_list.end());
+	rsid_list.erase(std::unique(rsid_list.begin(), rsid_list.end()), rsid_list.end());
 }
