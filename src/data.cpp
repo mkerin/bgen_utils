@@ -40,6 +40,7 @@ Data::Data(const parameters &my_params) : params(my_params){
 	n_env = 0;
 
 	match_snpkeys = false;
+	match_snpids = false;
 
 	// system time at start
 	start = std::chrono::system_clock::now();

@@ -32,7 +32,7 @@ void parse_arguments(parameters &p, int argc, char **argv) {
 	options.add_options("General")
 	    ("sim_pheno", "Simulate phenotype of form Y = X beta + epsilon", cxxopts::value<bool>(p.mode_gen_pheno))
 	    ("pred_pheno", "Predict phenotype Y = X beta", cxxopts::value<bool>(p.mode_pred_pheno))
-	    ("bgen", "Path to bgen file", cxxopts::value<std::string>(p.bgen_file))
+	    ("bgen", "BGEN file", cxxopts::value<std::string>(p.bgen_file))
 	    ("environment", "Path to file of environments (should contain only one column)", cxxopts::value<std::string>(p.env_file))
 	    ("coeffs", "Path to file of coefficients", cxxopts::value<std::string>(p.coeffs_file))
 	    ("out", "Filepath to output", cxxopts::value<std::string>(p.out_file))
@@ -55,6 +55,7 @@ void parse_arguments(parameters &p, int argc, char **argv) {
 	options.add_options("Internal")
 	    ("use_raw_env", "")
 	    ("coeffs2", "", cxxopts::value<std::string>(p.coeffs2_file))
+	    ("covar", "File of covariables", cxxopts::value<std::string>(p.covar_file))
 	;
 
 	try{
