@@ -362,7 +362,7 @@ void Data::output_init() {
 
 		std::string ofile_pred   = fstream_init(outf_pred, params.out_file, "_predicted_effects");
 		std::cout << "Writing predicted effects to " << ofile_pred << std::endl;
-		outf_pred << "Xbeta\teta\tXgamma\tZgamma" << std::endl;
+		outf_pred << "Wtau\tEalpha\tXbeta\teta\tXgamma\tZgamma" << std::endl;
 
 	} else if(params.mode_gen_pheno || params.mode_gen2_pheno) {
 		std::string ofile_pred   = fstream_init(outf_pred, params.out_file, "_predicted_effects");
@@ -393,7 +393,8 @@ void Data::output_results() {
 		outf << n_total_var << std::endl;
 	} else if (params.mode_pred_pheno) {
 		for (std::size_t ii = 0; ii < n_samples; ii++) {
-			outf_pred << Xb(ii) "\t" << E(ii, 0) << "\t" << Xg(ii);
+			outf_pred << Wtau(ii) <<"\t" << Ealpha(ii);
+			outf_pred << "\t" << Xb(ii) << "\t" << E(ii, 0) << "\t" << Xg(ii);
 			outf_pred << "\t" << Xg(ii) * E(ii, 0) << std::endl;
 		}
 
