@@ -248,6 +248,8 @@ void Data::pred_pheno() {
 	}
 	if(match_snpkeys || match_snpids) {
 		std::cout << "- " << n_matched << " SNPs found matching those given in --coeffs" << std::endl;
+	} else {
+		std::cout << "- " << n_total_var << " SNPs used to construct genetic effects" << std::endl;
 	}
 	if(n_env > 0) {
 		Zg = Xg * E.col(0).array();

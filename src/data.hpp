@@ -163,7 +163,15 @@ public:
 		W_reduced = false;
 	}
 
+	void read_coeffs2(){
+		read_coeffs_file(params.coeffs2_file, B2);
+	}
+
 	void read_coeffs(){
+		read_coeffs_file(params.coeffs_file, B);
+	}
+
+	void read_coeffs_file(std::string filename, EigenDataMatrix& coeffs_mat){
 		// Read coefficients to eigen matrix B
 		std::vector<std::string> case1 = {"beta", "gamma"};
 		std::vector<std::string> case1b = {"beta"};
@@ -175,46 +183,34 @@ public:
 		std::vector<std::string> case3b = {"SNPID", "beta"};
 
 		std::vector<std::string> coeff_names;
-		read_file_header(params.coeffs_file, coeff_names);
+		read_file_header(filename, coeff_names);
 
 		if(coeff_names == case1 || coeff_names == case1b) {
-			read_grid_file(params.coeffs_file, B, coeff_names);
+			read_grid_file(filename, coeffs_mat, coeff_names);
 
-			if (coeff_names == case1) assert(B.cols() == 2);
-			if (coeff_names == case1b) assert(B.cols() == 1);
+			if (coeff_names == case1) assert(coeffs_mat.cols() == 2);
+			if (coeff_names == case1b) assert(coeffs_mat.cols() == 1);
 		} else if (coeff_names == case2 || coeff_names == case2b) {
 			match_snpkeys = true;
-			read_txt_file_w_context(params.coeffs_file, 1, B, B_SNPKEYS,
-			                        coeff_names);
+			read_txt_file_w_context(filename, 1, coeffs_mat, B_SNPKEYS, coeff_names);
 			for (long jj = 0; jj < B_SNPKEYS.size(); jj++) {
 				B_SNPKEYS_map[B_SNPKEYS[jj]] = jj;
 			}
 
-			if (coeff_names == case2) assert(B.cols() == 2);
-			if (coeff_names == case2b) assert(B.cols() == 1);
+			if (coeff_names == case2) assert(coeffs_mat.cols() == 2);
+			if (coeff_names == case2b) assert(coeffs_mat.cols() == 1);
 		} else if (coeff_names == case3 || coeff_names == case3b) {
 			match_snpids = true;
-			read_txt_file_w_context(params.coeffs_file, 1, B, B_SNPIDS,
-			                        coeff_names);
+			read_txt_file_w_context(filename, 1, coeffs_mat, B_SNPIDS, coeff_names);
 			for (long jj = 0; jj < B_SNPIDS.size(); jj++) {
 				B_SNPIDS_map[B_SNPIDS[jj]] = jj;
 			}
 
-			if (coeff_names == case3) assert(B.cols() == 2);
-			if (coeff_names == case3b) assert(B.cols() == 1);
+			if (coeff_names == case3) assert(coeffs_mat.cols() == 2);
+			if (coeff_names == case3b) assert(coeffs_mat.cols() == 1);
 		} else {
-			throw std::logic_error("Unexpected header in --coeffs");
+			throw std::logic_error("Unexpected header in " + filename);
 		}
-	}
-
-	void read_coeffs2( ){
-		std::vector<std::string> coeff_names;
-		read_grid_file( params.coeffs2_file, B2, coeff_names );
-		std::vector<std::string> true_names = {"beta", "gamma"};
-		assert(B2.cols() == 2);
-		assert(true_names == coeff_names);
-		std::cout << B2.rows() << " coefficients read in from ";
-		std::cout << params.coeffs2_file << std::endl;
 	}
 
 	void read_environment( ){
