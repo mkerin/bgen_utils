@@ -388,7 +388,7 @@ void Data::output_init() {
 		std::cout << "Writing rescaled coeffs to " << ofile_coeffs << std::endl;
 		outf_coeffs << "chr rsid pos a0 a1 af beta gamma";
 		if(params.coeffs2_file != "NULL"){
-			outf_coeffs << "beta2 gamma2";
+			outf_coeffs << " beta2 gamma2";
 		}
 		outf_coeffs << std::endl;
 
@@ -407,7 +407,7 @@ void Data::output_init() {
 		std::cout << "Writing rescaled coeffs to " << ofile_coeffs << std::endl;
 		outf_coeffs << "chr rsid pos a0 a1 af beta gamma";
 		if(params.coeffs2_file != "NULL"){
-			outf_coeffs << "beta2 gamma2";
+			outf_coeffs << " beta2 gamma2";
 		}
 		outf_coeffs << std::endl;
 
