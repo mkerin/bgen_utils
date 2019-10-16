@@ -234,7 +234,7 @@ void Data::pred_pheno() {
 			beta_vec1.push_back(B(coeff_index, 0));
 			if(n_env > 0) {
 				Xg += G.col(kk).array() * B(coeff_index, 1);
-				Zg += G.col(kk).array() * E.array() * B(coeff_index, 1);
+				Zg += G.col(kk).array() * E.col(0).array() * B(coeff_index, 1);
 				gamma_vec1.push_back(B(coeff_index, 1));
 			} else {
 				gamma_vec1.push_back(0);
@@ -246,7 +246,7 @@ void Data::pred_pheno() {
 				beta_vec2.push_back(B2(coeff_index, 0));
 				if(n_env > 0) {
 					Xg2 += G.col(kk).array() * B2(coeff_index, 1);
-					Zg2 += G.col(kk).array() * E.array() * B2(coeff_index, 1);
+					Zg2 += G.col(kk).array() * E.col(0).array() * B2(coeff_index, 1);
 					gamma_vec2.push_back(B2(coeff_index, 1));
 				} else {
 					gamma_vec2.push_back(0);
@@ -387,7 +387,7 @@ void Data::output_init() {
 		std::string ofile_coeffs = fstream_init(outf_coeffs, params.out_file, "_true_rescaled_coeffs");
 		std::cout << "Writing rescaled coeffs to " << ofile_coeffs << std::endl;
 		outf_coeffs << "chr rsid pos a0 a1 af beta gamma";
-		if(params.coeffs2_file != "NULL"){
+		if(params.coeffs2_file != "NULL") {
 			outf_coeffs << " beta2 gamma2";
 		}
 		outf_coeffs << std::endl;
@@ -406,7 +406,7 @@ void Data::output_init() {
 		std::string ofile_coeffs = fstream_init(outf_coeffs, params.out_file, "_true_rescaled_coeffs");
 		std::cout << "Writing rescaled coeffs to " << ofile_coeffs << std::endl;
 		outf_coeffs << "chr rsid pos a0 a1 af beta gamma";
-		if(params.coeffs2_file != "NULL"){
+		if(params.coeffs2_file != "NULL") {
 			outf_coeffs << " beta2 gamma2";
 		}
 		outf_coeffs << std::endl;
@@ -438,14 +438,14 @@ void Data::output_results() {
 			outf_coeffs << chromosome_cum[ii] << " " << rsid_cum[ii] << " " << position_cum[ii];
 			outf_coeffs << " " << alleles_cum[ii][0] << " " << alleles_cum[ii][1];
 			outf_coeffs << " " << maf_cum[ii] << " " << beta_vec1[ii] << " " << gamma_vec1[ii];
-			if(params.coeffs2_file != "NULL"){
+			if(params.coeffs2_file != "NULL") {
 				outf_coeffs << " " << beta_vec2[ii] << " " << gamma_vec2[ii];
 			}
 			outf_coeffs << std::endl;
 		}
 	} else if(params.mode_gen_pheno || params.mode_gen2_pheno) {
 		for (std::size_t ii = 0; ii < n_samples; ii++) {
-			outf_pred << Wtau(ii) <<"\t" << Ealpha(ii) <<"\t" << Xb(ii) << "\t" << E(ii, 0);
+			outf_pred << Wtau(ii) << "\t" << Ealpha(ii) <<"\t" << Xb(ii) << "\t" << E(ii, 0);
 			outf_pred << "\t" << Xg(ii) << "\t" << Xg(ii) * E(ii, 0) << "\t" << noise(ii) << std::endl;
 		}
 
@@ -457,7 +457,7 @@ void Data::output_results() {
 			outf_coeffs << chromosome_cum[ii] << " " << rsid_cum[ii] << " " << position_cum[ii];
 			outf_coeffs << " " << alleles_cum[ii][0] << " " << alleles_cum[ii][1];
 			outf_coeffs << " " << maf_cum[ii] << " " << beta_vec1[ii] << " " << gamma_vec1[ii];
-			if(params.coeffs2_file != "NULL"){
+			if(params.coeffs2_file != "NULL") {
 				outf_coeffs << " " << beta_vec2[ii] << " " << gamma_vec2[ii];
 			}
 			outf_coeffs << std::endl;
