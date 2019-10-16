@@ -170,7 +170,7 @@ void Data::read_grid_file(const std::string &filename, EigenDataMatrix &M, std::
 
 				M(i, k) = tmp_d;
 			}
-			i++;                                                                                     // loop should end at i == n_grid
+			i++;                                                                                                                                                                                                                                                                         // loop should end at i == n_grid
 		}
 		if (i < n_grid) {
 			throw std::runtime_error("ERROR: could not convert txt file (too few lines).");
@@ -190,6 +190,7 @@ void Data::read_txt_file_w_context(const std::string &filename, const int &col_o
 
 	   col_offset - how many contextual columns to skip
 	 */
+	M_snpids.clear();
 
 	// Reading from file
 	boost_io::filtering_istream fg;
@@ -206,7 +207,7 @@ void Data::read_txt_file_w_context(const std::string &filename, const int &col_o
 	// Read file twice to ascertain number of lines
 	int n_lines = 0;
 	std::string line;
-	getline(fg, line);                             // skip header
+	getline(fg, line);                                                                                         // skip header
 	while (getline(fg, line)) {
 		n_lines++;
 	}
@@ -256,7 +257,7 @@ void Data::read_txt_file_w_context(const std::string &filename, const int &col_o
 				}
 			}
 		}
-		i++;                                                         // loop should end at i == n_samples
+		i++;                                                                                                                                                                                 // loop should end at i == n_samples
 	}
 	std::cout << n_lines << " rows found in " << filename << std::endl;
 }
@@ -478,11 +479,32 @@ void Data::pred_pheno() {
 
 	// S2; genetic or interaction effects
 	Xb = EigenDataArrayX::Zero(n_samples);
+	Xg = EigenDataArrayX::Zero(n_samples);
 	Zg = EigenDataArrayX::Zero(n_samples);
 	Xb2 = EigenDataArrayX::Zero(n_samples);
+	Xg2 = EigenDataArrayX::Zero(n_samples);
 	Zg2 = EigenDataArrayX::Zero(n_samples);
+	Wtau = EigenDataVector::Zero(n_samples);
+	Ealpha = EigenDataVector::Zero(n_samples);
 	int ch = 0;
 	long n_matched = 0;
+	std::cout << std::endl << "Generating predicted phenotype" << std::endl;
+	if (params.normalise_genotypes) {
+		std::cout << "- using normalised expected dosage (mean zero, variance one)" << std::endl;
+	} else {
+		std::cout << "- using raw expected dosage"<< std::endl;
+	}
+	if(params.mode_low_mem) {
+		std::cout << "- simulating low memory compression used by LEMMA" << std::endl;
+	}
+	if(n_env > 0) {
+		if (params.use_raw_env) {
+			std::cout << "- env-vector unprocessed" << std::endl;
+		} else {
+			std::cout << "- env-vector normalised to mean zero, variance one" << std::endl;
+		}
+	}
+	std::cout << std::endl;
 	while (read_bgen_chunk()) {
 		// Raw dosage read in to G
 		if(ch % 10 == 0) {
@@ -505,16 +527,12 @@ void Data::pred_pheno() {
 				if (it != B_SNPKEYS_map.end()) {
 					coeff_index = it->second;
 					n_matched++;
-				} else {
-					continue;
 				}
 			} else if(match_snpids) {
 				auto it = B_SNPIDS_map.find(SNPID[kk]);
 				if (it != B_SNPIDS_map.end()) {
 					coeff_index = it->second;
 					n_matched++;
-				} else {
-					continue;
 				}
 			} else {
 				coeff_index = kk + n_total_var;
@@ -522,23 +540,23 @@ void Data::pred_pheno() {
 
 			Xb += G.col(kk).array() * B(coeff_index, 0);
 			if(n_env > 0) {
-				Zg += G.col(kk).array() * E.array() * B(coeff_index, 1);
+				Xg += G.col(kk).array() * B(coeff_index, 1);
 			}
 
 			if(params.coeffs2_file != "NULL") {
-				assert(!(match_snpkeys || match_snpids));
-				// Not yet implemented
+				// WARNING: ASSUMED THAT SNPKEYS IN COEFFS and COEFFS2 ARE IDENTICAL
 				Xb2 += G.col(kk).array() * B2(coeff_index, 0);
 				if(n_env > 0) {
-					Zg2 += G.col(kk).array() * E.array() * B2(coeff_index, 1);
+					Xg2 += G.col(kk).array() * B2(coeff_index, 1);
 				}
 			}
 		}
 
-
 		n_total_var += n_var;
 		ch++;
 	}
+	Zg = Xg * E.array();
+	Zg2 = Xg2 * E.array();
 	if(n_total_var != B.rows() & !(match_snpkeys || match_snpids)) {
 		std::cout << "ERROR: n var read in = " << n_total_var << std::endl;
 		std::cout << "ERROR: n coeffs read in = " << B.rows() << std::endl;
@@ -557,6 +575,27 @@ void Data::gen_pheno() {
 
 	// Get predicted effects
 	pred_pheno();
+
+	if(!params.normalise_genotypes) {
+		std::cout << "Centering Xbeta and Xgamma before adding to simulated pheno" << std::endl;
+		long n_cols = 1;
+		Xb -= Xb.mean();
+		// center_matrix(Xb, n_cols);
+		if(params.coeffs2_file != "NULL") {
+			Xb2 -= Xb2.mean();
+			// center_matrix(Xb2, n_cols);
+		}
+		if(n_env > 0) {
+			Xg -= Xg.mean();
+			// center_matrix(Xg, n_cols);
+			Zg = Xg * E.array();
+			if(params.coeffs2_file != "NULL") {
+				Xg2 -= Xg2.mean();
+				// center_matrix(Xg2, n_cols);
+				Zg2 = Xg * E.array();
+			}
+		}
+	}
 
 	// Generate random effects
 	// http://itscompiling.eu/2016/04/11/generating-random-numbers-cpp/
@@ -681,6 +720,7 @@ void Data::gen2_pheno() {
 
 	// S2; genetic or interaction effects
 	Xb = EigenDataArrayX::Zero(n_samples);
+	Xg = EigenDataArrayX::Zero(n_samples);
 	Zg = EigenDataArrayX::Zero(n_samples);
 	int ch = 0;
 	while (read_bgen_chunk()) {
@@ -695,12 +735,13 @@ void Data::gen2_pheno() {
 		// Add effects to Y
 		for (int kk = 0; kk < n_var; kk++) {
 			Xb += G.col(kk).array() * B(kk + n_total_var, 0);
-			Zg += G.col(kk).array() * E.array() * B(kk + n_total_var, 1);
+			Xg += G.col(kk).array() * B(kk + n_total_var, 1);
 		}
 
 		n_total_var += n_var;
 		ch++;
 	}
+	Zg = E.array() * Xg;
 	if(n_total_var != B.rows()) {
 		std::cout << "ERROR: n var read in = " << n_total_var << std::endl;
 		std::cout << "ERROR: n coeffs read in = " << B.rows() << std::endl;
@@ -761,7 +802,7 @@ void Data::compute_correlations_chunk(EigenRefDataArrayXX dXtEEX_chunk) {
 void Data::print_keys() {
 	// Step 4; compute correlations
 	int ch = 0;
-	reduce_to_complete_cases();                             // From read_sids!!
+	reduce_to_complete_cases();                                                                                         // From read_sids!!
 	// std::cout << "num samples: " << n_samples << std::endl;
 	while (read_bgen_chunk()) {
 		// Raw dosage read in to G

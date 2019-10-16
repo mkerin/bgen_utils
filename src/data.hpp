@@ -60,19 +60,19 @@ public:
 	std::vector< std::vector< std::string > > alleles_cum;
 	std::vector< std::string > SNPKEYS_cum;
 
-	int n_pheno;                          // number of phenotypes
-	int n_covar;                          // number of covariates
-	int n_samples;                        // number of samples
+	int n_pheno;
+	int n_covar;
+	int n_samples;
 	int n_env;
 	std::size_t n_total_var;
 	bool bgen_pass;
 	int n_var;
-	std::size_t n_var_parsed;             // Track progress through IndexQuery
+	std::size_t n_var_parsed;
 	long int n_constant_variance;
 
-	bool Y_reduced;               // Variables to track whether we have already
-	bool W_reduced;               // reduced to complete cases or not.
-	bool E_reduced;               // reduced to complete cases or not.
+	bool Y_reduced;
+	bool W_reduced;
+	bool E_reduced;
 
 	std::vector< double > info;
 	std::vector< double > maf;
@@ -80,21 +80,21 @@ public:
 	std::vector< std::string > incl_rsid_list;
 	std::vector< std::string > excl_rsid_list;
 
-	std::map<int, bool> missing_covars;             // set of subjects missing >= 1 covariate
-	std::map<int, bool> missing_phenos;             // set of subjects missing >= phenotype
-	std::map<int, bool> missing_envs;             // set of subjects missing >= phenotype
-	std::map< int, bool > incomplete_cases;             // union of samples missing data
+	std::map<int, bool> missing_covars;
+	std::map<int, bool> missing_phenos;
+	std::map<int, bool> missing_envs;
+	std::map< int, bool > incomplete_cases;
 
 	std::vector< std::string > pheno_names;
 	std::vector< std::string > covar_names;
 	std::vector< std::string > env_names;
 
-	EigenDataMatrix G;             // probabilistic genotype matrix
-	EigenDataArrayX Y;             // phenotype matrix
-	EigenDataMatrix W;             // covariate matrix
+	EigenDataMatrix G;
+	EigenDataArrayX Y;
+	EigenDataMatrix W;
 	EigenDataMatrix E;
-	EigenDataMatrix B, B2;             // matrix of coefficients (beta, gamma)
-	EigenDataArrayX Xb, Zg, Xb2, Zg2, Ealpha, Wtau, noise;
+	EigenDataMatrix B, B2;
+	EigenDataArrayX Xb, Xg, Zg, Xb2, Xg2, Zg2, Ealpha, Wtau, noise;
 	EigenDataMatrix env_profile;
 
 // Matching snps via the SNPKEY
@@ -138,7 +138,7 @@ public:
 		n_covar = 0;
 		n_env = 0;
 
-		match_snpkeys = false;                                  // Used when reconstructing yhat from coeffs
+		match_snpkeys = false;
 
 		// system time at start
 		start = std::chrono::system_clock::now();
@@ -196,6 +196,14 @@ public:
 			std::string ofile_pred   = fstream_init(outf_pred, params.out_file, "_predicted_effects");
 			std::cout << "Writing predicted effects to " << ofile_pred << std::endl;
 			outf_pred << "Xbeta\tZgamma" << std::endl;
+
+			std::string ofile_coeffs = fstream_init(outf_coeffs, params.out_file, "_true_rescaled_coeffs");
+			std::cout << "Writing rescaled coeffs to " << ofile_coeffs << std::endl;
+			outf_coeffs << "chr rsid pos a0 a1 af beta gamma";
+			if(params.coeffs2_file != "NULL") {
+				outf_coeffs << " beta2 gamma2";
+			}
+			outf_coeffs << std::endl;
 		} else if(params.mode_gen_pheno || params.mode_gen2_pheno) {
 			std::string ofile_pred   = fstream_init(outf_pred, params.out_file, "_predicted_effects");
 
@@ -207,15 +215,13 @@ public:
 				outf << "y" << std::endl;
 			}
 
-			if(params.rescale_coeffs) {
-				std::string ofile_coeffs = fstream_init(outf_coeffs, params.out_file, "_true_rescaled_coeffs");
-				std::cout << "Writing rescaled coeffs to " << ofile_coeffs << std::endl;
-				outf_coeffs << "chr rsid pos a0 a1 beta gamma";
-				if(params.coeffs2_file != "NULL") {
-					outf_coeffs << " beta2 gamma2";
-				}
-				outf_coeffs << std::endl;
+			std::string ofile_coeffs = fstream_init(outf_coeffs, params.out_file, "_true_rescaled_coeffs");
+			std::cout << "Writing rescaled coeffs to " << ofile_coeffs << std::endl;
+			outf_coeffs << "chr rsid pos a0 a1 af beta gamma";
+			if(params.coeffs2_file != "NULL") {
+				outf_coeffs << " beta2 gamma2";
 			}
+			outf_coeffs << std::endl;
 		} else if (params.mode_compute_correlations) {
 			std::cout << "Writing snp-environment correlations to " << ofile << std::endl;
 		} else if (params.mode_print_keys) {
@@ -236,6 +242,17 @@ public:
 			for (std::size_t ii = 0; ii < n_samples; ii++) {
 				outf << Y(ii) << std::endl;
 			}
+
+			for (std::size_t ii = 0; ii < n_total_var; ii++) {
+				outf_coeffs << chromosome_cum[ii] << " " << rsid_cum[ii] << " " << position_cum[ii];
+				outf_coeffs << " " << alleles_cum[ii][0] << " " << alleles_cum[ii][1];
+				outf_coeffs << " " << maf_cum[ii];
+				outf_coeffs << " " << B(ii, 0) << " " << B(ii, 1);
+				if(params.coeffs2_file != "NULL") {
+					outf_coeffs << " " << B2(ii, 0) << " " << B2(ii, 1);
+				}
+				outf_coeffs << std::endl;
+			}
 		} else if(params.mode_gen_pheno || params.mode_gen2_pheno) {
 			for (std::size_t ii = 0; ii < n_samples; ii++) {
 				outf_pred << Wtau(ii) <<"\t" << Ealpha(ii) <<"\t" << Xb(ii) << "\t" << Zg(ii) << "\t" << noise(ii) << std::endl;
@@ -245,16 +262,15 @@ public:
 				outf << Y(ii) << std::endl;
 			}
 
-			if(params.rescale_coeffs) {
-				for (std::size_t ii = 0; ii < n_total_var; ii++) {
-					outf_coeffs << chromosome_cum[ii] << " " << rsid_cum[ii] << " " << position_cum[ii];
-					outf_coeffs << " " << alleles_cum[ii][0] << " " << alleles_cum[ii][1];
-					outf_coeffs << " " << B(ii, 0) << " " << B(ii, 1);
-					if(params.coeffs2_file != "NULL") {
-						outf_coeffs << " " << B2(ii, 0) << " " << B2(ii, 1);
-					}
-					outf_coeffs << std::endl;
+			for (std::size_t ii = 0; ii < n_total_var; ii++) {
+				outf_coeffs << chromosome_cum[ii] << " " << rsid_cum[ii] << " " << position_cum[ii];
+				outf_coeffs << " " << alleles_cum[ii][0] << " " << alleles_cum[ii][1];
+				outf_coeffs << " " << maf_cum[ii];
+				outf_coeffs << " " << B(ii, 0) << " " << B(ii, 1);
+				if(params.coeffs2_file != "NULL") {
+					outf_coeffs << " " << B2(ii, 0) << " " << B2(ii, 1);
 				}
+				outf_coeffs << std::endl;
 			}
 
 			if(params.print_causal_rsids) {
@@ -306,7 +322,7 @@ public:
 		uint32_t pos_j;
 		std::string rsid_j;
 		std::vector< std::string > alleles_j;
-		std::string SNPID_j;                                  // read but ignored
+		std::string SNPID_j;
 		std::vector< std::vector< double > > probs;
 		ProbSetter setter( &probs );
 
@@ -455,8 +471,10 @@ public:
 				sigma = std::sqrt(sigma/(valid_count - 1.0));
 			}
 
-			dosage_j -= mu;
-			dosage_j /= sigma;
+			if(params.normalise_genotypes) {
+				dosage_j -= mu;
+				dosage_j /= sigma;
+			}
 			G.col(jj) = dosage_j;
 
 			jj++;
@@ -633,7 +651,7 @@ public:
 						incomplete_row[i] = 1;
 					}
 				}
-				i++;                                                                         // loop should end at i == n_samples
+				i++;
 			}
 			if (i < n_samples) {
 				throw std::runtime_error("ERROR: could not convert txt file (too few lines).");
@@ -674,48 +692,56 @@ public:
 		W_reduced = false;
 	}
 
+	void read_coeffs2(){
+		read_coeffs_file(params.coeffs2_file, B2);
+	}
+
 	void read_coeffs(){
+		read_coeffs_file(params.coeffs_file, B);
+	}
+
+	void read_coeffs_file(std::string filename, EigenDataMatrix& coeffs_mat){
 		// Read coefficients to eigen matrix B
 		std::vector<std::string> case1 = {"beta", "gamma"};
+		std::vector<std::string> case1b = {"beta"};
+
 		std::vector<std::string> case2 = {"SNPKEY", "beta", "gamma"};
+		std::vector<std::string> case2b = {"SNPKEY", "beta"};
+
 		std::vector<std::string> case3 = {"SNPID", "beta", "gamma"};
+		std::vector<std::string> case3b = {"SNPID", "beta"};
 
 		std::vector<std::string> coeff_names;
-		read_file_header(params.coeffs_file, coeff_names);
+		read_file_header(filename, coeff_names);
 
-		if(coeff_names == case1) {
-			read_grid_file(params.coeffs_file, B, coeff_names);
-		} else if (coeff_names == case2) {
-			read_txt_file_w_context(params.coeffs_file, 1, B, B_SNPKEYS,
-			                        coeff_names);
+		if(coeff_names == case1 || coeff_names == case1b) {
+			read_grid_file(filename, coeffs_mat, coeff_names);
+
+			if (coeff_names == case1) assert(coeffs_mat.cols() == 2);
+			if (coeff_names == case1b) assert(coeffs_mat.cols() == 1);
+		} else if (coeff_names == case2 || coeff_names == case2b) {
 			match_snpkeys = true;
+			read_txt_file_w_context(filename, 1, coeffs_mat, B_SNPKEYS, coeff_names);
+			B_SNPKEYS_map.clear();
 			for (long jj = 0; jj < B_SNPKEYS.size(); jj++) {
 				B_SNPKEYS_map[B_SNPKEYS[jj]] = jj;
 			}
-		} else if (coeff_names == case3) {
-			read_txt_file_w_context(params.coeffs_file, 1, B, B_SNPIDS,
-			                        coeff_names);
+
+			if (coeff_names == case2) assert(coeffs_mat.cols() == 2);
+			if (coeff_names == case2b) assert(coeffs_mat.cols() == 1);
+		} else if (coeff_names == case3 || coeff_names == case3b) {
 			match_snpids = true;
+			read_txt_file_w_context(filename, 1, coeffs_mat, B_SNPIDS, coeff_names);
+			B_SNPIDS_map.clear();
 			for (long jj = 0; jj < B_SNPIDS.size(); jj++) {
 				B_SNPIDS_map[B_SNPIDS[jj]] = jj;
 			}
+
+			if (coeff_names == case3) assert(coeffs_mat.cols() == 2);
+			if (coeff_names == case3b) assert(coeffs_mat.cols() == 1);
 		} else {
-			throw std::logic_error("Unexpected header in --coeffs");
+			throw std::logic_error("Unexpected header in " + filename);
 		}
-
-		assert(B.cols() == 2);
-		std::cout << B.rows() << " coefficients read in from ";
-		std::cout << params.coeffs_file << std::endl;
-	}
-
-	void read_coeffs2( ){
-		std::vector<std::string> coeff_names;
-		read_grid_file( params.coeffs2_file, B2, coeff_names );
-		std::vector<std::string> true_names = {"beta", "gamma"};
-		assert(B2.cols() == 2);
-		assert(true_names == coeff_names);
-		std::cout << B2.rows() << " coefficients read in from ";
-		std::cout << params.coeffs2_file << std::endl;
 	}
 
 	void read_environment( ){

@@ -24,7 +24,7 @@ void check_counts(std::string in_str, int i, int num, int argc) {
 			std::cout << "Please refer to the manual for usage instructions." << std::endl;
 		} else {
 			std::cout << "ERROR: flag " << in_str << " seems to require ";
- 			std::cout << std::to_string(num) + " arguments. No arguments of ";
+			std::cout << std::to_string(num) + " arguments. No arguments of ";
 			std::cout << "this type should be implemented yet.." << std::endl;
 		}
 		std::exit(EXIT_FAILURE);
@@ -35,7 +35,7 @@ void check_file_exists(const std::string& filename){
 	// Throw error if given file does not exist.
 	// NB: Doesn't check if file is empty etc.
 	struct stat buf;
-	if(stat(filename.c_str(), &buf) != 0){
+	if(stat(filename.c_str(), &buf) != 0) {
 		std::cout << "File " << filename << " does not exist" << std::endl;
 		throw std::runtime_error("ERROR: file does not exist");
 	}
@@ -77,6 +77,7 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 		"--mode_low_mem",
 		"--use_raw_covars",
 		"--use_raw_env",
+		"--use_raw_dosage",
 		"--random_seed",
 		"--compute-env-snp-correlations",
 		"--print_causal_rsids"
@@ -109,16 +110,16 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 	// Ensure some arguments only appear once
 	bool check_out = 0;
 
-	for(i = 0; i < argc; i++){
-		if(*argv[i] == '-'){
+	for(i = 0; i < argc; i++) {
+		if(*argv[i] == '-') {
 			in_str = argv[i];
 			std::string in_str1(argv[i]);
 			set_it = option_list.find(in_str);
 
 			if(set_it == option_list.end()) {
 				std::cout << "ERROR: flag '" << in_str <<
-					"' not valid. Please refer to the manual for usage instructions." <<
-					std::endl;
+				    "' not valid. Please refer to the manual for usage instructions." <<
+				    std::endl;
 
 				exit(EXIT_FAILURE);
 			}
@@ -130,7 +131,7 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 			// Data inputs
 			if(in_str1 == "--bgen") {
 				check_counts(in_str, i, 1, argc);
-				p.bgen_file = argv[i + 1]; // bgen file
+				p.bgen_file = argv[i + 1];                 // bgen file
 				check_file_exists(p.bgen_file);
 				p.bgi_file = p.bgen_file + ".bgi";
 				i += 1;
@@ -138,21 +139,21 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 
 			if(in_str1 == "--covar") {
 				check_counts(in_str, i, 1, argc);
-				p.covar_file = argv[i + 1]; // covar file
+				p.covar_file = argv[i + 1];                 // covar file
 				check_file_exists(p.covar_file);
 				i += 1;
 			}
 
 			if(in_str1 == "--environment") {
 				check_counts(in_str, i, 1, argc);
-				p.env_file = argv[i + 1]; // covar file
+				p.env_file = argv[i + 1];                 // covar file
 				check_file_exists(p.env_file);
 				i += 1;
 			}
 
 			if(in_str1 == "--random_seed") {
-					p.random_seed = std::stoul(argv[i + 1]);
-					i += 1;
+				p.random_seed = std::stoul(argv[i + 1]);
+				i += 1;
 			}
 
 			if(in_str1 == "--true_sigma") {
@@ -204,7 +205,7 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 
 			if(in_str1 == "--coeffs") {
 				check_counts(in_str, i, 1, argc);
-				p.coeffs_file = argv[i + 1]; // covar file
+				p.coeffs_file = argv[i + 1];                 // covar file
 				check_file_exists(p.coeffs_file);
 				i += 1;
 			}
@@ -248,6 +249,10 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 				i += 0;
 			}
 
+			if(in_str1 == "--use_raw_dosage") {
+				p.normalise_genotypes = false;
+			}
+
 			if(in_str1 == "--compute-env-snp-correlations") {
 				p.mode_compute_correlations = true;
 				i += 0;
@@ -284,14 +289,14 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 			if(in_str1 == "--maf") {
 				check_counts(in_str, i, 1, argc);
 				p.maf_lim = true;
-				p.min_maf = std::stod(argv[i + 1]); // bgen file
+				p.min_maf = std::stod(argv[i + 1]);                 // bgen file
 				i += 1;
 			}
 
 			if(in_str1 == "--info") {
 				check_counts(in_str, i, 1, argc);
 				p.info_lim = true;
-				p.min_info = std::stod(argv[i + 1]); // bgen file
+				p.min_info = std::stod(argv[i + 1]);                 // bgen file
 				i += 1;
 			}
 
@@ -312,7 +317,7 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 
 			if(in_str1 == "--incl_sample_ids") {
 				check_counts(in_str, i, 1, argc);
-				p.incl_sids_file = argv[i + 1]; // include sample ids file
+				p.incl_sids_file = argv[i + 1];                 // include sample ids file
 				check_file_exists(p.incl_sids_file);
 				i += 1;
 			}
@@ -320,7 +325,7 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 			if(in_str1 == "--incl_rsids") {
 				check_counts(in_str, i, 1, argc);
 				p.incl_snps = true;
-				p.incl_rsids_file = argv[i + 1]; // include variant ids file
+				p.incl_rsids_file = argv[i + 1];                 // include variant ids file
 				check_file_exists(p.incl_rsids_file);
 				i += 1;
 			}
@@ -328,7 +333,7 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 			if(in_str1 == "--excl_rsids") {
 				check_counts(in_str, i, 1, argc);
 				p.excl_snps = true;
-				p.excl_rsids_file = argv[i + 1]; // include variant ids file
+				p.excl_rsids_file = argv[i + 1];                 // include variant ids file
 				check_file_exists(p.excl_rsids_file);
 				i += 1;
 			}
@@ -337,7 +342,7 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 				check_counts(in_str, i, 1, argc);
 				p.select_rsid = true;
 				int jj = i+1;
-				while(jj < argc){
+				while(jj < argc) {
 					std::string arg_str(argv[jj]);
 					if (arg_str.find("--") != std::string::npos) break;
 					p.rsid.push_back(argv[jj]);
@@ -354,7 +359,7 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 
 			if(in_str1 == "--chunk") {
 				check_counts(in_str, i, 1, argc);
-				p.chunk_size = std::stoi(argv[i + 1]); // bgen file
+				p.chunk_size = std::stoi(argv[i + 1]);                 // bgen file
 				i += 1;
 			}
 
@@ -367,40 +372,40 @@ void parse_arguments(parameters &p, int argc, char *argv[]) {
 	}
 
 	// Sanity checks here
-	if(p.mode_gen_pheno){
+	if(p.mode_gen_pheno) {
 		bool has_bgen = p.bgen_file != "NULL";
 		bool has_out = p.out_file != "NULL";
 		bool has_all = (has_out && has_bgen);
-		if(!has_all){
+		if(!has_all) {
 			std::cout << "ERROR: bgen and out files should be ";
 			std::cout << "provided in conjunction with --mode_gen_pheno" << std::endl;
 			std::exit(EXIT_FAILURE);
 		}
-		if(p.coeffs_file == "NULL"){
+		if(p.coeffs_file == "NULL") {
 			throw std::runtime_error("File of coefficients must be provided in gen pheno mode");
 		}
 	}
-	if(p.mode_gen2_pheno){
+	if(p.mode_gen2_pheno) {
 		bool has_bgen = p.bgen_file != "NULL";
 		bool has_out = p.out_file != "NULL";
 		bool has_all = (has_out && has_bgen);
-		if(!has_all){
+		if(!has_all) {
 			std::cout << "ERROR: bgen and out files should all be ";
 			std::cout << "provided in conjunction with --mode_gen2_pheno" << std::endl;
 			std::exit(EXIT_FAILURE);
 		}
-		if(p.coeffs_file == "NULL"){
+		if(p.coeffs_file == "NULL") {
 			throw std::runtime_error("File of coefficients must be provided in gen pheno mode");
 		}
-		if(p.rescale_coeffs){
+		if(p.rescale_coeffs) {
 			std::cout << "--rescale_coeffs not supported by --mode_gen2_pheno" << std::endl;
 			p.rescale_coeffs = false;
 		}
 	}
-	if(p.range || p.incl_snps || p.excl_snps){
+	if(p.range || p.incl_snps || p.excl_snps) {
 		struct stat buf;
 		p.bgi_file = p.bgen_file + ".bgi";
-		if(stat(p.bgi_file.c_str(), &buf) != 0){
+		if(stat(p.bgi_file.c_str(), &buf) != 0) {
 			std::cout << "If using --range the BGEN index file " << p.bgi_file << " must exist" << std::endl;
 			throw std::runtime_error("ERROR: file does not exist");
 		}
