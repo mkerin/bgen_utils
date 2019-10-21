@@ -35,7 +35,6 @@ TEST_CASE("parse commandline"){
 	CHECK(p.end == 14);
 }
 
-
 TEST_CASE("sim_phenotype (SNPKEY)"){
 	parameters p;
 	p.bgen_file = "unit/data/n50_p100.bgen";
@@ -60,6 +59,44 @@ TEST_CASE("sim_phenotype (SNPIDS)"){
 	p.bgen_file = "unit/data/n50_p100.bgen";
 	p.bgi_file = "unit/data/n50_p100.bgen.bgi";
 	p.coeffs_file = "unit/data/coeffs_w_snpid.txt";
+
+	p.mode_gen_pheno = true;
+	p.random_seed = 1;
+	p.min_maf = 0.01;
+
+	Data data(p);
+	data.sim_pheno();
+	CHECK(data.Y(0) == Approx(-1.508216515));
+	CHECK(data.Y(1) == Approx(-0.6373672634));
+	CHECK(data.Y(2) == Approx(-1.0795088689));
+	CHECK(data.Y(3) == Approx(1.5720520434));
+	CHECK(data.Y(4) == Approx(-2.1022111011));
+}
+
+TEST_CASE("sim_phenotype"){
+	parameters p;
+	p.bgen_file = "unit/data/n50_p100.bgen";
+	p.bgi_file = "unit/data/n50_p100.bgen.bgi";
+	p.coeffs_file = "unit/data/coeffs.txt";
+
+	p.mode_gen_pheno = true;
+	p.random_seed = 1;
+	p.min_maf = 0.01;
+
+	Data data(p);
+	data.sim_pheno();
+	CHECK(data.Y(0) == Approx(-1.508216515));
+	CHECK(data.Y(1) == Approx(-0.6373672634));
+	CHECK(data.Y(2) == Approx(-1.0795088689));
+	CHECK(data.Y(3) == Approx(1.5720520434));
+	CHECK(data.Y(4) == Approx(-2.1022111011));
+}
+
+TEST_CASE("sim_phenotype (shortened)"){
+	parameters p;
+	p.bgen_file = "unit/data/n50_p100.bgen";
+	p.bgi_file = "unit/data/n50_p100.bgen.bgi";
+	p.coeffs_file = "unit/data/coeffs_shortened.txt";
 
 	p.mode_gen_pheno = true;
 	p.random_seed = 1;

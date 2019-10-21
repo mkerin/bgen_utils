@@ -22,7 +22,7 @@ int main( int argc, char** argv ) {
 	parameters p;
 
 	std::cout << "=================="<< std::endl;
-	std::cout << "bgen_utils v" << VERSION_MAJOR << "." << VERSION_MINOR << "." << VERSION_PATCH << std::endl;
+	std::cout << "BGEN-Utils v" << VERSION_MAJOR << "." << VERSION_MINOR << "." << VERSION_PATCH << std::endl;
 	std::cout << "==================" << std::endl << std::endl;
 
 	try {
@@ -69,18 +69,15 @@ int main( int argc, char** argv ) {
 		query->initialise();
 		data.bgenView->set_query( query );
 		data.bgenView->summarise(std::cout);
+		std::cout << std::endl;
 
 		data.output_init();
 		if(p.mode_ssv){
-			std::cout << "Computing sum of column variances" << std::endl;
 			data.calc_ssv();
 		} else if(p.mode_pred_pheno){
 			data.pred_pheno();
 		} else if(p.mode_gen_pheno) {
 			data.sim_pheno();
-		} else if(p.mode_gen2_pheno) {
-			// Depreciated
-			// data.gen2_pheno();
 		} else if(p.mode_compute_correlations){
 			data.compute_correlations();
 		} else if(p.mode_print_keys){

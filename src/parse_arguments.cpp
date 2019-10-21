@@ -33,7 +33,8 @@ void parse_arguments(parameters &p, int argc, char **argv) {
 	    ("sim_pheno", "Simulate phenotype of form Y = X beta + epsilon", cxxopts::value<bool>(p.mode_gen_pheno))
 	    ("pred_pheno", "Predict phenotype Y = X beta", cxxopts::value<bool>(p.mode_pred_pheno))
 	    ("bgen", "BGEN file", cxxopts::value<std::string>(p.bgen_file))
-	    ("environment", "Path to file of environments (should contain only one column)", cxxopts::value<std::string>(p.env_file))
+	    ("environment", "Path to file of environments", cxxopts::value<std::string>(p.env_file))
+	    ("environment_weights", "Path to file of interaction weights (default: 1 if env contains only one column)", cxxopts::value<std::string>(p.env_profile_file))
 	    ("coeffs", "Path to file of coefficients", cxxopts::value<std::string>(p.coeffs_file))
 	    ("out", "Filepath to output", cxxopts::value<std::string>(p.out_file))
 	    ("incl_sample_ids", "Text file of sample ids to include (no header, 1 per line)",
@@ -55,6 +56,9 @@ void parse_arguments(parameters &p, int argc, char **argv) {
 	options.add_options("Internal")
 	    ("use_raw_env", "")
 	    ("coeffs2", "", cxxopts::value<std::string>(p.coeffs2_file))
+	    ("print_keys", "", cxxopts::value<bool>(p.mode_print_keys))
+	    ("maf", "", cxxopts::value<double>())
+	    ("compute-env-snp-correlations", "", cxxopts::value<bool>(p.mode_compute_correlations))
 	    ("covar", "File of covariables", cxxopts::value<std::string>(p.covar_file))
 	;
 
@@ -71,6 +75,12 @@ void parse_arguments(parameters &p, int argc, char **argv) {
 			p.bgi_file = p.bgen_file + ".bgi";
 			check_file_exists(p.bgen_file);
 			check_file_exists(p.bgi_file);
+		}
+		if(p.env_file != "NULL") {
+			check_file_exists(p.env_file);
+		}
+		if(p.env_profile_file != "NULL") {
+			check_file_exists(p.env_profile_file);
 		}
 
 		if(p.coeffs_file != "NULL") {
@@ -174,8 +184,7 @@ void parse_arguments(parameters &p, int argc, char **argv) {
 //		"--mode_low_mem",
 //		"--use_raw_covars",
 //		"--use_raw_env",
-//		"--compute-env-snp-correlations",
-//		"--print_causal_rsids"
+//		"--compute-env-snp-correlations"
 //	};
 //
 //	std::set<std::string>::iterator set_it;

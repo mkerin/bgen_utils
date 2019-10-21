@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.7.2)
-project(bgen_utils VERSION 0.1.0)
+project(bgen_utils VERSION 1.0.0)
 
 set(CMAKE_CXX_STANDARD 11)
 
@@ -36,7 +36,7 @@ list(APPEND COMPILE_OPTS -DVERSION_MAJOR=${PROJECT_VERSION_MAJOR})
 list(APPEND COMPILE_OPTS -DVERSION_MINOR=${PROJECT_VERSION_MINOR})
 list(APPEND COMPILE_OPTS -DVERSION_PATCH=${PROJECT_VERSION_PATCH})
 
-set(SOURCES src/data.cpp src/parse_arguments.cpp)
+set(SOURCES src/data.cpp src/parse_arguments.cpp src/file_utils.cpp src/eigen_utils.cpp)
 set(BGEN_INCL_DIRS ${BGEN}/genfile/include ${BGEN}/3rd_party/zstd-1.1.0/lib ${BGEN}/db/include ${BGEN}/3rd_party/sqlite3 ${BGEN}/3rd_party/boost_1_55_0)
 
 ##Platform invariant variables

@@ -9,7 +9,7 @@
 #include "../src/tools/eigen3.3/Dense"
 #include "../src/parse_arguments.hpp"
 #include "../src/data.hpp"
-
+#include "../src/eigen_utils.hpp"
 
 TEST_CASE("Data") {
 	parameters p;
@@ -24,12 +24,12 @@ TEST_CASE("Data") {
 		data.reduce_to_complete_cases();
 
 		CHECK(data.E(0, 0) == Approx(0.785198212));
-		data.center_matrix(data.E, data.n_env);
-		data.scale_matrix(data.E, data.n_env, data.env_names);
+		EigenUtils::center_matrix(data.E, data.n_env);
+		EigenUtils::scale_matrix(data.E, data.n_env, data.env_names);
 		CHECK(data.E(0, 0) == Approx(0.8957059881));
 
 		data.read_bgen_chunk();
-		EigenDataArrayXX dXtEEX_chunk(data.n_var, data.n_env * data.n_env);
+		EigenDataArrayXX dXtEEX_chunk(data.n_var_chunk, data.n_env * data.n_env);
 		data.compute_correlations_chunk(dXtEEX_chunk);
 
 		CHECK(data.n_env == 4);
@@ -56,17 +56,17 @@ TEST_CASE("Data") {
 		data.reduce_to_complete_cases();
 
 		CHECK(data.E(0, 0) == Approx(0.785198212));
-		data.center_matrix(data.E, data.n_env);
-		data.scale_matrix(data.E, data.n_env, data.env_names);
+		EigenUtils::center_matrix(data.E, data.n_env);
+		EigenUtils::scale_matrix(data.E, data.n_env, data.env_names);
 		CHECK(data.E(0, 0) == Approx(0.8957059881));
 
-		data.center_matrix(data.W, data.n_covar);
-		data.scale_matrix(data.W, data.n_covar, data.covar_names);
+		EigenUtils::center_matrix(data.W, data.n_covar);
+		EigenUtils::scale_matrix(data.W, data.n_covar, data.covar_names);
 		data.regress_first_mat_from_second(data.W, "covars", data.covar_names, data.E, "env");
 		CHECK(data.E(0, 0) == Approx(0.9959851422));
 
 		data.read_bgen_chunk();
-		EigenDataArrayXX dXtEEX_chunk(data.n_var, data.n_env * data.n_env);
+		EigenDataArrayXX dXtEEX_chunk(data.n_var_chunk, data.n_env * data.n_env);
 		data.compute_correlations_chunk(dXtEEX_chunk);
 
 		CHECK(data.n_env == 4);
@@ -95,17 +95,17 @@ TEST_CASE("Data") {
 		data.reduce_to_complete_cases();
 
 		CHECK(data.E(0, 0) == Approx(0.785198212));
-		data.center_matrix(data.E, data.n_env);
-		data.scale_matrix(data.E, data.n_env, data.env_names);
+		EigenUtils::center_matrix(data.E, data.n_env);
+		EigenUtils::scale_matrix(data.E, data.n_env, data.env_names);
 		CHECK(data.E(0, 0) == Approx(0.7617238014));
 
-		data.center_matrix(data.W, data.n_covar);
-		data.scale_matrix(data.W, data.n_covar, data.covar_names);
+		EigenUtils::center_matrix(data.W, data.n_covar);
+		EigenUtils::scale_matrix(data.W, data.n_covar, data.covar_names);
 		data.regress_first_mat_from_second(data.W, "covars", data.covar_names, data.E, "env");
 		CHECK(data.E(0, 0) == Approx(0.8123860763));
 
 		data.read_bgen_chunk();
-		EigenDataArrayXX dXtEEX_chunk(data.n_var, data.n_env * data.n_env);
+		EigenDataArrayXX dXtEEX_chunk(data.n_var_chunk, data.n_env * data.n_env);
 		data.compute_correlations_chunk(dXtEEX_chunk);
 
 		CHECK(data.n_env == 4);
@@ -127,11 +127,11 @@ TEST_CASE("Data") {
 		Data data(p);
 		data.read_environment();
 		data.reduce_to_complete_cases();
-		data.center_matrix(data.E, data.n_env);
-		data.scale_matrix(data.E, data.n_env, data.env_names);
+		EigenUtils::center_matrix(data.E, data.n_env);
+		EigenUtils::scale_matrix(data.E, data.n_env, data.env_names);
 
 		data.read_bgen_chunk();
-		EigenDataArrayXX dXtEEX_chunk(data.n_var, data.n_env * data.n_env);
+		EigenDataArrayXX dXtEEX_chunk(data.n_var_chunk, data.n_env * data.n_env);
 		data.compute_correlations_chunk(dXtEEX_chunk);
 
 		CHECK(data.n_env == 4);
