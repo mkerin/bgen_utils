@@ -1,6 +1,6 @@
-# bgen_utils
+# BGEN-Utils
 
-Programme to allow basic simulation of phenotypes with a heritable component from `bgen` file format. Available for beta testing.
+`C++` executable to simulate phenotypes from genetic data stored in `BGEN` file format. Allows simulation of multiplicative GxE effects as in the LEMMA model. Also able to compute SNP-Env correlations (required as a preprocessing step by LEMMA) in parallel.
 
 ## Install
 Dependencies:
@@ -89,9 +89,9 @@ Y = X_ij \beta_j + X_ij E_il w_lk \gamma_jk + \epsilon.
 
 ## Compute SNP-Env correlations
 
-Given a BGEN file containing the `NxM` dosage matrix `X` and `NxL` matrix of environmental variables `E`, this programme computes the following correlations
+Given a BGEN file containing the `NxM` dosage matrix `X` and `NxL` matrix of environmental variables `E`, this programme computes the quantity
 ```
-\sum_i \sum_{l_1, l_2} X_{ij}^2 E_{il_1} E_{il_2}.
+\sum_{i=1}^N \sum_{l = 1}^L \sum_{k = 1}^L X_{ij}^2 E_{il} E_{ik}.
 ```
 This output is used by LEMMA. Both `X` and `E` are by default normalised to have column mean zero and column variance one.
 
