@@ -50,6 +50,7 @@ void parse_arguments(parameters &p, int argc, char **argv) {
 	    ("true_sigma", "Variance of gaussian noise added to simulated phenotype (default: 1). Must be greater than zero.",
 	    cxxopts::value<double>(p.sigma))
 	    ("use_raw_dosage", "Use expected dosage instead of normalising columns of the dosage matrix to mean zero and variance one.")
+	    ("mode_low_mem", "Transform genotypes to simulate low memory compression used by LEMMA", cxxopts::value<bool>(p.mode_low_mem))
 	    ("h, help", "")
 	;
 

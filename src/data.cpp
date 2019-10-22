@@ -45,6 +45,8 @@ Data::Data(const parameters &my_params) : params(my_params){
 	n_constant_variance = 0;
 	n_covar = 0;
 	n_env = 0;
+	n_gxe_components = 0;
+	n_gxe_components2 = 0;
 
 	// system time at start
 	start = std::chrono::system_clock::now();
@@ -57,7 +59,7 @@ Data::~Data() {
 	auto end = std::chrono::system_clock::now();
 	std::chrono::duration<double> elapsed_seconds = end-start;
 	std::time_t end_time = std::chrono::system_clock::to_time_t(end);
-	std::cout << "Analysis finished at " << std::ctime(&end_time);
+	std::cout << std::endl << "Analysis finished at " << std::ctime(&end_time);
 	std::cout << "Elapsed time: " << elapsed_seconds.count() << "s" << std::endl;
 
 	boost_io::close(outf);
@@ -195,12 +197,14 @@ void Data::gen_genetic_effects() {
 	std::cout << "Used " << n_var << " SNPs to construct genetic effects" << std::endl;
 	if(n_var < n_var_parsed) {
 		std::cout << "- Removed " << n_constant_variance  << " SNP(s) with zero variance" << std::endl;
-		std::cout << "- Removed " << n_var_parsed - n_var - n_constant_variance;
-		std::cout << " SNP(s) due to MAF or INFO limits" << std::endl;
+		if(params.maf_lim || params.info_lim) {
+			std::cout << "- Removed " << n_var_parsed - n_var - n_constant_variance;
+			std::cout << " SNP(s) due to MAF or INFO limits" << std::endl;
+		}
 	}
 
 	// Subset to coefficients corresponding to valid SNPs
-	if(n_var < n_var_parsed) {
+	if(n_var < n_var_parsed && B.rows() == n_var_parsed) {
 		B = EigenUtils::subset_rows(B, valid_var_index);
 		if(params.coeffs2_file != "NULL") {
 			B2 = EigenUtils::subset_rows(B2, valid_var_index);
@@ -365,8 +369,91 @@ void Data::calc_ssv() {
 		}
 		ch++;
 	}
-	if(n_constant_variance > 0) {
-		std::cout << " Removed " << n_constant_variance  << " column(s) variance < 1e-12 or mac < 5:" << std::endl;
+
+	// Output
+	std::cout << "Used " << n_var << " SNPs to compute sum of column variances" << std::endl;
+	if(n_var < n_var_parsed) {
+		std::cout << "- Removed " << n_constant_variance  << " SNP(s) with zero variance" << std::endl;
+		if(params.maf_lim || params.info_lim) {
+			std::cout << "- Removed " << n_var_parsed - n_var - n_constant_variance;
+			std::cout << " SNP(s) due to MAF or INFO limits" << std::endl;
+		}
+	}
+}
+
+void Data::compute_correlations() {
+	// Gen vector of fitted effects Y_hat = age + X beta + Z gamma
+	// Gaussian noise added when writing to file
+
+	// Step 1; Read in raw covariates
+	// - also makes a record of missing values
+	read_environment();
+	if(params.covar_file != "NULL") {
+		read_covar();
+	}
+
+	// Step 2; Reduce raw covariates and phenotypes to complete cases
+	// - may change value of n_samples
+	// - will also skip these cases when reading bgen later
+	reduce_to_complete_cases();
+
+	// Step 3; Normalise covars
+	EigenUtils::center_matrix( E, n_env );
+	EigenUtils::scale_matrix( E, n_env, env_names );
+
+	if(n_covar > 0) {
+		EigenUtils::center_matrix(W, n_covar);
+		EigenUtils::scale_matrix(W, n_covar, covar_names);
+	}
+	if(n_covar > 0) {
+		regress_first_mat_from_second(W, "covars", covar_names, E, "env");
+	}
+
+	// Output to user
+	std::cout << std::endl << "Generating SNP-Env correlations" << std::endl;
+	if (params.normalise_genotypes) {
+		std::cout << "- using normalised expected dosage (mean zero, variance one)" << std::endl;
+	} else {
+		std::cout << "- using raw expected dosage"<< std::endl;
+	}
+	if(params.mode_low_mem) {
+		std::cout << "- simulating low memory compression used by LEMMA" << std::endl;
+	}
+	if(n_env > 0) {
+		if (params.use_raw_env) {
+			std::cout << "- env variables unprocessed" << std::endl;
+		} else {
+			std::cout << "- env variables normalised to mean zero, variance one" << std::endl;
+		}
+	}
+	std::cout << std::endl;
+
+	// Step 4; compute correlations
+	int ch = 0;
+	while (read_bgen_chunk()) {
+		// Raw dosage read in to G
+		std::cout << "Chunk " << ch+1 << " read (size " << n_var_chunk;
+		std::cout << ", " << n_var_parsed-1 << "/" << bgenView->number_of_variants();
+		std::cout << " variants parsed)" << std::endl;
+
+		assert(n_var_chunk == G.cols());
+
+		EigenDataArrayXX dXtEEX_chunk(n_var_chunk, n_env * n_env);
+		compute_correlations_chunk(dXtEEX_chunk);
+		output_correlations(dXtEEX_chunk);
+
+		n_var += n_var_chunk;
+		ch++;
+	}
+
+	// Output
+	std::cout << "Used " << n_var << " SNPs to compute env-snp correlations" << std::endl;
+	if(n_var < n_var_parsed) {
+		std::cout << "- Removed " << n_constant_variance  << " SNP(s) with zero variance" << std::endl;
+		if(params.maf_lim || params.info_lim) {
+			std::cout << "- Removed " << n_var_parsed - n_var - n_constant_variance;
+			std::cout << " SNP(s) due to MAF or INFO limits" << std::endl;
+		}
 	}
 }
 
@@ -392,8 +479,14 @@ void Data::print_keys() {
 		ch++;
 	}
 
-	if(n_constant_variance > 0) {
-		std::cout << " Removed " << n_constant_variance  << " column(s) with zero variance" << std::endl;
+	// Output
+	std::cout << "Used " << n_var << " SNPs" << std::endl;
+	if(n_var < n_var_parsed) {
+		std::cout << "- Removed " << n_constant_variance  << " SNP(s) with zero variance" << std::endl;
+		if(params.maf_lim || params.info_lim) {
+			std::cout << "- Removed " << n_var_parsed - n_var - n_constant_variance;
+			std::cout << " SNP(s) due to MAF or INFO limits" << std::endl;
+		}
 	}
 }
 
@@ -823,57 +916,6 @@ void Data::compute_correlations_chunk(EigenRefDataArrayXX dXtEEX_chunk) {
 				dXtEEX_chunk(jj, mm*n_env + ll) = x;
 			}
 		}
-	}
-}
-
-void Data::compute_correlations() {
-	// Gen vector of fitted effects Y_hat = age + X beta + Z gamma
-	// Gaussian noise added when writing to file
-
-	// Step 1; Read in raw covariates
-	// - also makes a record of missing values
-	read_environment();
-	if(params.covar_file != "NULL") {
-		read_covar();
-	}
-
-	// Step 2; Reduce raw covariates and phenotypes to complete cases
-	// - may change value of n_samples
-	// - will also skip these cases when reading bgen later
-	reduce_to_complete_cases();
-
-	// Step 3; Normalise covars
-	EigenUtils::center_matrix( E, n_env );
-	EigenUtils::scale_matrix( E, n_env, env_names );
-
-	if(n_covar > 0) {
-		EigenUtils::center_matrix(W, n_covar);
-		EigenUtils::scale_matrix(W, n_covar, covar_names);
-	}
-	if(n_covar > 0) {
-		regress_first_mat_from_second(W, "covars", covar_names, E, "env");
-	}
-
-	// Step 4; compute correlations
-	int ch = 0;
-	while (read_bgen_chunk()) {
-		// Raw dosage read in to G
-		std::cout << "Chunk " << ch+1 << " read (size " << n_var_chunk;
-		std::cout << ", " << n_var_parsed-1 << "/" << bgenView->number_of_variants();
-		std::cout << " variants parsed)" << std::endl;
-
-		assert(n_var_chunk == G.cols());
-
-		EigenDataArrayXX dXtEEX_chunk(n_var_chunk, n_env * n_env);
-		compute_correlations_chunk(dXtEEX_chunk);
-		output_correlations(dXtEEX_chunk);
-
-		n_var += n_var_chunk;
-		ch++;
-	}
-
-	if(n_constant_variance > 0) {
-		std::cout << " Removed " << n_constant_variance  << " column(s) with zero variance:" << std::endl;
 	}
 }
 

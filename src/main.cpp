@@ -21,6 +21,7 @@
 int main( int argc, char** argv ) {
 	parameters p;
 
+	std::cout << std::endl;
 	std::cout << "=================="<< std::endl;
 	std::cout << "BGEN-Utils v" << VERSION_MAJOR << "." << VERSION_MINOR << "." << VERSION_PATCH << std::endl;
 	std::cout << "==================" << std::endl << std::endl;
