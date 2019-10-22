@@ -34,8 +34,8 @@ void parse_arguments(parameters &p, int argc, char **argv) {
 	    ("pred_pheno", "Predict phenotype Y = X beta", cxxopts::value<bool>(p.mode_pred_pheno))
 	    ("bgen", "BGEN file", cxxopts::value<std::string>(p.bgen_file))
 	    ("environment", "Path to file of environments", cxxopts::value<std::string>(p.env_file))
-	    ("environment_weights", "Path to file of interaction weights (default: 1 if env contains only one column)", cxxopts::value<std::string>(p.env_profile_file))
-	    ("coeffs", "Path to file of coefficients", cxxopts::value<std::string>(p.coeffs_file))
+	    ("environment_weights", "Path to file of interaction weights (default: 1 if using a single environment)", cxxopts::value<std::string>(p.env_profile_file))
+	    ("coeffs", "Path to file of SNP effect sizes. Header required.", cxxopts::value<std::string>(p.coeffs_file))
 	    ("out", "Filepath to output", cxxopts::value<std::string>(p.out_file))
 	    ("incl_sample_ids", "Text file of sample ids to include (no header, 1 per line)",
 	    cxxopts::value<std::string>(p.incl_sids_file))
@@ -56,6 +56,7 @@ void parse_arguments(parameters &p, int argc, char **argv) {
 	options.add_options("Internal")
 	    ("use_raw_env", "")
 	    ("coeffs2", "", cxxopts::value<std::string>(p.coeffs2_file))
+	    ("environment_weights2", "Path to file of interaction weights (default: 1 if using a single environment)", cxxopts::value<std::string>(p.env_profile_file))
 	    ("print_keys", "", cxxopts::value<bool>(p.mode_print_keys))
 	    ("maf", "", cxxopts::value<double>())
 	    ("compute-env-snp-correlations", "", cxxopts::value<bool>(p.mode_compute_correlations))

@@ -86,11 +86,11 @@ public:
 	EigenDataMatrix G;
 	EigenDataArrayX Y;
 	EigenDataMatrix W;
-	EigenDataMatrix E, eta;
+	EigenDataMatrix E, eta, eta2;
 	EigenDataMatrix B, B2;
 	EigenDataArrayX Xb, Zg, Xb2, Zg2, Ealpha, Wtau, noise;
 	EigenDataArrayXX Xg, Xg2;
-	EigenDataMatrix env_profile;
+	EigenDataMatrix env_profile, env_profile2;
 
 	genfile::bgen::View::UniquePtr bgenView;
 
@@ -120,14 +120,6 @@ public:
 	void output_correlations(EigenRefDataArrayXX vec);
 
 	/*** Text file input ***/
-	void read_incl_sids();
-	void read_covar();
-	void read_environment();
-	void read_env_profile();
-	EigenDataMatrix sort_coeffs(EigenRefDataMatrix orig,
-	                            const std::unordered_map<std::string, long>& key_map,
-	                            std::string key_type);
-
 	void read_incl_rsids(){
 		read_rsids(params.incl_rsids_file, incl_rsid_list);
 	}
@@ -136,21 +128,28 @@ public:
 		read_rsids(params.excl_rsids_file, excl_rsid_list);
 	}
 
-	void read_rsids(const std::string& filename,
-	                std::vector< std::string >& rsid_list);
-
-	void read_coeffs2(){
-		read_coeffs_file(params.coeffs2_file, B2, n_gxe_components2);
-	}
-
+	void read_incl_sids();
+	void read_covar();
+	void read_environment();
+	void read_env_profile();
 	void read_coeffs(){
 		read_coeffs_file(params.coeffs_file, B, n_gxe_components);
 	}
+	void read_coeffs2(){
+		read_coeffs_file(params.coeffs2_file, B2, n_gxe_components2);
+	}
+	void read_env_profile2();
+
+	/*** Internal use ***/
+	void reduce_to_complete_cases();
+	EigenDataMatrix sort_coeffs(EigenRefDataMatrix orig,
+	                            const std::unordered_map<std::string, long>& key_map,
+	                            std::string key_type);
+	void read_rsids(const std::string& filename,
+	                std::vector< std::string >& rsid_list);
 
 	void read_coeffs_file(std::string filename, EigenDataMatrix& coeffs_mat,
 	                      long&n_gxe_components);
-
-	void reduce_to_complete_cases();
 
 	void read_txt_file_w_context( const std::string& filename,
 	                              const int& col_offset,

@@ -69,23 +69,33 @@ void Data::gen_genetic_effects() {
 	if(params.covar_file != "NULL") {
 		read_covar();
 	}
-	read_coeffs();
 	if(params.env_file != "NULL") {
 		read_environment();
-		assert(n_gxe_components <= n_env);
 	}
-	if(params.coeffs2_file != "NULL") {
-		read_coeffs2();
-		assert(B2.cols() == B.cols());
-	}
+	read_coeffs();
+	assert(n_gxe_components <= n_env);
 	if(n_env > 1 && params.env_profile_file != "NULL") {
 		read_env_profile();
 		assert(env_profile.cols() == n_gxe_components);
 	} else if (n_env > 1) {
-		throw std::runtime_error("--environment_weights must be provided if the number "
-		                         "of environments is greater than one.");
+		throw std::runtime_error("--environment_weights must be provided to "
+		                         "generate a GxE effect with multiple environments.");
 	} else if (n_env == 1) {
 		env_profile = EigenDataMatrix::Constant(1, 1, 1);
+	}
+
+	if(params.coeffs2_file != "NULL") {
+		read_coeffs2();
+		assert(n_gxe_components2 <= n_env);
+		if(n_env > 1 && params.env_profile_file2 != "NULL") {
+			read_env_profile();
+			assert(env_profile2.cols() == n_gxe_components2);
+		} else if (n_env > 1) {
+			assert(B2.cols() == B.cols());
+			env_profile2 = env_profile;
+		} else if (n_env == 1) {
+			env_profile = EigenDataMatrix::Constant(1, 1, 1);
+		}
 	}
 
 
@@ -238,10 +248,11 @@ void Data::sim_pheno() {
 	noise *= std::sqrt(params.sigma / var(noise));
 
 	// target variances
+	double tol = 0.000001;
 	if(params.rescale_coeffs) {
 		std::cout << "Rescaling components to ensure that sample ";
 		std::cout << "heritability matches expected heritability" << std::endl;
-		double sigma_b, sigma_g, sigma_b2, sigma_g2, sigma_c, sigma_e, tol = 0.000001;
+		double sigma_b, sigma_g, sigma_b2, sigma_g2, sigma_c, sigma_e;
 		double resid_pve = 1.0 - params.hc - params.he - params.hb - params.hg - params.hb2 - params.hg2;
 		sigma_b = params.hb / resid_pve;
 		sigma_b2 = params.hb2 / resid_pve;
@@ -296,8 +307,8 @@ void Data::sim_pheno() {
 
 	Y = Wtau + Ealpha + Xb + Zg + Xb2 + Zg2 + noise;
 	std::cout << "Empirical PVE from each effect [computed as Var(<effect>) / Var(y)]:" << std::endl;
-	if(n_env > 0) std::cout << "- PVE-Env = " << var(Ealpha) / var(Y) << std::endl;
-	if(n_covar > 0) std::cout << "- PVE-Covars = " << var(Wtau) / var(Y) << std::endl;
+	if(n_env > 0 && params.he > tol) std::cout << "- PVE-Env = " << var(Ealpha) / var(Y) << std::endl;
+	if(n_covar > 0 && params.hc > tol) std::cout << "- PVE-Covars = " << var(Wtau) / var(Y) << std::endl;
 	std::cout << "- PVE-G = " << var(Xb) / var(Y) << std::endl;
 	if(n_env > 0) std::cout << "- PVE-GxE = " << var(Zg) / var(Y) << std::endl;
 	if(params.coeffs2_file != "NULL") {
@@ -421,7 +432,7 @@ void Data::output_results() {
 			std::vector<std::string> header;
 			Eigen::MatrixXd mat(n_samples, 4 + 2 * n_gxe_components);
 			long cc = 0;
-			if(n_covar > 0){
+			if(n_covar > 0) {
 				header.emplace_back("Ctau");
 				mat.col(cc) = Wtau;
 				cc++;
@@ -457,12 +468,12 @@ void Data::output_results() {
 			std::cout << "Writing rescaled coeffs to " << ofile << std::endl;
 			std::vector<std::string> header = {"SNPID", "chr", "rsid", "pos",
 				                               "a0", "a1", "af", "beta"};
-			for (long cc = 0; cc < n_gxe_components; cc++){
+			for (long cc = 0; cc < n_gxe_components; cc++) {
 				header.emplace_back("gamma" + to_string(cc));
 			}
 			if(params.coeffs2_file != "NULL") {
 				header.emplace_back("beta_v2");
-				for (long cc = 0; cc < n_gxe_components2; cc++){
+				for (long cc = 0; cc < n_gxe_components2; cc++) {
 					header.emplace_back("gamma" + to_string(cc) + "_v2");
 				}
 			}
@@ -1060,6 +1071,15 @@ void Data::read_env_profile() {
 	assert(env_profile.rows() == n_env || env_profile.cols() == n_env);
 	if(env_profile.cols() == n_env && env_profile.rows() != n_env) {
 		env_profile.transposeInPlace();
+	}
+}
+
+void Data::read_env_profile2() {
+	std::vector<std::string> placeholder;
+	fileUtils::read_matrix(params.env_profile_file2, env_profile2, placeholder);
+	assert(env_profile2.rows() == n_env || env_profile2.cols() == n_env);
+	if(env_profile2.cols() == n_env && env_profile2.rows() != n_env) {
+		env_profile2.transposeInPlace();
 	}
 }
 

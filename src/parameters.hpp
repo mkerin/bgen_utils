@@ -9,7 +9,8 @@
 class parameters {
 public:
 	std::string bgen_file, bgi_file, out_file, covar_file, incl_rsids_file, incl_sids_file;
-	std::string excl_rsids_file, coeffs_file, coeffs2_file, chr, env_file, env_profile_file;
+	std::string excl_rsids_file, coeffs_file, coeffs2_file, chr, env_file;
+	std::string env_profile_file, env_profile_file2;
 	std::vector< std::string > rsid;
 	int chunk_size, missing_code;
 	uint32_t start, end;
@@ -54,12 +55,12 @@ public:
 		use_raw_env = false;
 		// check allele probs sum to 1 by default
 		sigma = 1;
-		hb = 0;                          // trait variance explained by additive genetics
-		hg = 0;                          // trait variance explained by additive GxE
-		hb2 = 0;                          // trait variance explained by additive genetics
-		hg2 = 0;                          // trait variance explained by additive GxE
-		hc = 0;                          // trait variance explained by additive covar
-		he = 0;                          // trait variance explained by additive env
+		hb = 0;                                  // trait variance explained by additive genetics
+		hg = 0;                                  // trait variance explained by additive GxE
+		hb2 = 0;                                  // trait variance explained by additive genetics
+		hg2 = 0;                                  // trait variance explained by additive GxE
+		hc = 0;                                  // trait variance explained by additive covar
+		he = 0;                                  // trait variance explained by additive env
 		random_seed = -1;
 	}
 
