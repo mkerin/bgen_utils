@@ -41,9 +41,13 @@ void read_matrix(const std::string& filename,
 void read_matrix(const std::string& filename,
                  Eigen::MatrixXd& M);
 
-void write_matrix(Eigen::Ref<Eigen::MatrixXd> mat,
+void write_matrix(const Eigen::MatrixXd& mat,
                   const std::string& filename,
                   const std::vector<std::string>& header);
+
+void write_matrix(const Eigen::ArrayXd& mat,
+				  const std::string& filename,
+				  const std::vector<std::string>& header);
 }
 
 #endif //BGEN_UTILS_FILE_UTILS_HPP

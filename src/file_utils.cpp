@@ -10,6 +10,7 @@
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/filesystem.hpp>
 
+#include <iostream>
 #include <string>
 #include <vector>
 #include <map>
@@ -29,7 +30,8 @@ std::string fileUtils::filepath_format(const std::string& orig,
 	return ofile;
 }
 
-void fileUtils::write_matrix(Eigen::Ref<Eigen::MatrixXd> mat,
+template <typename Derived>
+void write_matrix2(const Eigen::DenseBase<Derived>& mat,
                              const std::string& filename,
                              const std::vector<std::string>& header){
 	assert(header.size() == mat.cols());
@@ -58,6 +60,18 @@ void fileUtils::write_matrix(Eigen::Ref<Eigen::MatrixXd> mat,
 
 	outf.pop();
 	boost_io::close(outf);
+}
+
+void fileUtils::write_matrix(const Eigen::MatrixXd& mat,
+							 const std::string& filename,
+							 const std::vector<std::string>& header){
+	write_matrix2(mat, filename, header);
+}
+
+void fileUtils::write_matrix(const Eigen::ArrayXd& mat,
+							 const std::string& filename,
+							 const std::vector<std::string>& header){
+	write_matrix2(mat, filename, header);
 }
 
 std::string fileUtils::fstream_init(boost_io::filtering_ostream &my_outf,
