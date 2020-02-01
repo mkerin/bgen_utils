@@ -60,6 +60,12 @@ void parse_arguments(parameters &p, int argc, char **argv) {
 	    ("environment_weights2", "Path to file of interaction weights (default: 1 if using a single environment)", cxxopts::value<std::string>(p.env_profile_file))
 	    ("print_keys", "", cxxopts::value<bool>(p.mode_print_keys))
 	    ("maf", "", cxxopts::value<double>())
+	    ("h2-main","",cxxopts::value<double>(p.hb))
+	    ("h2-gxe","",cxxopts::value<double>(p.hg))
+	    ("h2-main2","",cxxopts::value<double>(p.hb2))
+		("h2-gxe2","",cxxopts::value<double>(p.hg2))
+		("h2-env","",cxxopts::value<double>(p.he))
+		("h2-covar","",cxxopts::value<double>(p.hc))
 	    ("compute-env-snp-correlations", "", cxxopts::value<bool>(p.mode_compute_correlations))
 	    ("covar", "File of covariables", cxxopts::value<std::string>(p.covar_file))
 	;
@@ -160,6 +166,11 @@ void parse_arguments(parameters &p, int argc, char **argv) {
 			throw std::runtime_error("File of coefficients must be provided in pred pheno mode");
 		}
 	}
+
+	if(!(p.hc >= 0 || p.he >= 0 || p.hb >= 0 || p.hg >= 0 || p.hb2 >= 0 || p.hg2 >= 0)){
+		throw std::runtime_error("Heritability parameters must be non-negative");
+	}
+	p.rescale_coeffs = (p.hc > 0 || p.he > 0 || p.hb > 0 || p.hg > 0);
 
 	/*** Obsolete code after converting to CXXOPTS ***/
 	/*** Commented out functionality deemed unnecessary for simplified branch ***/

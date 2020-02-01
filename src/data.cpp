@@ -256,22 +256,15 @@ void Data::sim_pheno() {
 	if(params.rescale_coeffs) {
 		std::cout << "Rescaling components to ensure that sample ";
 		std::cout << "heritability matches expected heritability" << std::endl;
-		double sigma_b, sigma_g, sigma_b2, sigma_g2, sigma_c, sigma_e;
 		double resid_pve = 1.0 - params.hc - params.he - params.hb - params.hg - params.hb2 - params.hg2;
-		sigma_b = params.hb / resid_pve;
-		sigma_b2 = params.hb2 / resid_pve;
-		sigma_g = params.hg / resid_pve;
-		sigma_g2 = params.hg2 / resid_pve;
-		sigma_e = params.he / resid_pve;
-		sigma_c = params.hc / resid_pve;
 
 		// additive covar effects
 		if(params.hc > tol) {
 			EigenDataVector tau(n_covar);
 			sim_gaussian_noise(tau, 1, generator);
 			Wtau = W * tau;
-			double sf = params.sigma * sigma_c / var(Wtau);
-			Wtau     *= std::sqrt(sf);
+			double sf = std::sqrt(params.sigma * params.hc / resid_pve / var(Wtau));
+			Wtau     *= sf;
 		}
 
 		// additive env effects
@@ -279,45 +272,48 @@ void Data::sim_pheno() {
 			EigenDataVector alpha(n_env);
 			sim_gaussian_noise(alpha, 1, generator);
 			Ealpha = E * alpha;
-			double sf = params.sigma * sigma_e / var(Ealpha);
-			Ealpha    *= std::sqrt(sf);
+			double sf  = std::sqrt(params.sigma * params.he / resid_pve / var(Ealpha));
+			Ealpha    *= sf;
 		}
 
 		// rescaling for correct heritability
 		scalarData var_xb = var(Xb);
-		Xb       *= std::sqrt(params.sigma * sigma_b / var_xb);
-		B.col(0) *= std::sqrt(params.sigma * sigma_b / var_xb);
+		Xb       *= std::sqrt(params.sigma * params.hb / resid_pve / var_xb);
+		B.col(0) *= std::sqrt(params.sigma * params.hb / resid_pve / var_xb);
 
 		if(n_env > 0) {
 			scalarData var_zg = var(Zg);
-			Zg       *= std::sqrt(params.sigma * sigma_g / var_zg);
-			Xg       *= std::sqrt(params.sigma * sigma_g / var_zg);
-			B.block(0, 1, B.rows(), n_gxe_components) *= std::sqrt(params.sigma * sigma_g / var_zg);
+			double sf = std::sqrt(params.sigma * params.hg / resid_pve / var_zg);
+			Zg       *= sf;
+			Xg       *= sf;
+			B.block(0, 1, B.rows(), n_gxe_components) *= sf;
 		}
 
 		if(params.coeffs2_file != "NULL") {
 			scalarData var_xb = var(Xb2);
-			Xb2       *= std::sqrt(params.sigma * sigma_b2 / var_xb);
-			B2.col(0) *= std::sqrt(params.sigma * sigma_b2 / var_xb);
+			double sf  = std::sqrt(params.sigma * params.hb2 / resid_pve / var_xb);
+			Xb2       *= sf;
+			B2.col(0) *= sf;
 
 			if(n_env > 0) {
 				scalarData var_zg = var(Zg2);
-				Zg2       *= std::sqrt(params.sigma * sigma_g2 / var_zg);
-				Xg2       *= std::sqrt(params.sigma * sigma_g2 / var_zg);
-				B2.block(0, 1, B2.rows(), n_gxe_components2) *= std::sqrt(params.sigma * sigma_g2 / var_zg);
+				sf         = std::sqrt(params.sigma * params.hg2 / resid_pve / var_xb);
+				Zg2       *= sf;
+				Xg2       *= sf;
+				B2.block(0, 1, B2.rows(), n_gxe_components2) *= sf;
 			}
 		}
 	}
 
 	Y = Wtau + Ealpha + Xb + Zg + Xb2 + Zg2 + noise;
 	std::cout << "Empirical PVE from each effect [computed as Var(<effect>) / Var(y)]:" << std::endl;
-	if(n_env > 0 && params.he > tol) std::cout << "- PVE-Env = " << var(Ealpha) / var(Y) << std::endl;
+	if(n_env > 0 && params.he > tol)   std::cout << "- PVE-Env = "    << var(Ealpha) / var(Y) << std::endl;
 	if(n_covar > 0 && params.hc > tol) std::cout << "- PVE-Covars = " << var(Wtau) / var(Y) << std::endl;
 	std::cout << "- PVE-G = " << var(Xb) / var(Y) << std::endl;
-	if(n_env > 0) std::cout << "- PVE-GxE = " << var(Zg) / var(Y) << std::endl;
+	if(n_env > 0)                      std::cout << "- PVE-GxE = "    << var(Zg) / var(Y) << std::endl;
 	if(params.coeffs2_file != "NULL") {
-		std::cout << "- PVE-G2 = " << var(Xb2) / var(Y) << std::endl;
-		if(n_env > 0) std::cout << "- PVE-GxE2 = " << var(Zg2) / var(Y) << std::endl;
+		                               std::cout << "- PVE-G2 = "     << var(Xb2) / var(Y) << std::endl;
+		if(n_env > 0)                  std::cout << "- PVE-GxE2 = "   << var(Zg2) / var(Y) << std::endl;
 	}
 	std::cout << std::endl;
 }
