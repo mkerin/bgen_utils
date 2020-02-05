@@ -283,10 +283,12 @@ void Data::sim_pheno() {
 
 		if(n_env > 0) {
 			scalarData var_zg = var(Zg);
-			double sf = std::sqrt(params.sigma * params.hg / resid_pve / var_zg);
-			Zg       *= sf;
-			Xg       *= sf;
-			B.block(0, 1, B.rows(), n_gxe_components) *= sf;
+			if (var_zg > 0) {
+				double sf = std::sqrt(params.sigma * params.hg / resid_pve / var_zg);
+				Zg *= sf;
+				Xg *= sf;
+				B.block(0, 1, B.rows(), n_gxe_components) *= sf;
+			}
 		}
 
 		if(params.coeffs2_file != "NULL") {
