@@ -24,7 +24,7 @@ int main( int argc, char** argv ) {
 	std::cout << std::endl;
 	std::cout << "=================="<< std::endl;
 	std::cout << "BGEN-Utils v" << VERSION_MAJOR << "." << VERSION_MINOR << "." << VERSION_PATCH << std::endl;
-	std::cout << "==================" << std::endl << std::endl;
+	std::cout << "==================" << std::endl;
 
 	try {
 		parse_arguments(p, argc, argv);

@@ -75,8 +75,15 @@ void parse_arguments(parameters &p, int argc, char **argv) {
 		auto args = opts.arguments();
 
 		if (opts.count("help") || args.empty()) {
-			std::cout << options.help({"General"}) << std::endl;
+			std::cout << options.help({"General", "VB", "Assoc", "RHE", "Other"}) << std::endl;
 			std::exit(0);
+		} else {
+			std::cout << std::endl << "Commandline arguments:" << std::endl;
+			std::cout << argv[0] << " \\" << std::endl;
+			for (auto keyvalue : args) {
+				std::cout << "\t--" << keyvalue.key() << "=" << keyvalue.value() <<" \\" << std::endl;
+			}
+			std::cout << std::endl;
 		}
 
 		if(p.bgen_file != "NULL") {
