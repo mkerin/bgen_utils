@@ -291,7 +291,7 @@ void Data::sim_pheno() {
 
 		if(params.coeffs2_file != "NULL") {
 			scalarData var_xb = var(Xb2);
-			if (var_xb > 0)
+			if (var_xb > 0) {
 				double sf = std::sqrt(params.sigma * params.hb2 / resid_pve / var_xb);
 				Xb2 *= sf;
 				B2.col(0) *= sf;
