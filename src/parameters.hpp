@@ -11,12 +11,11 @@ public:
 	std::string bgen_file, bgi_file, out_file, covar_file, incl_rsids_file, incl_sids_file;
 	std::string excl_rsids_file, coeffs_file, coeffs2_file, chr, env_file;
 	std::string env_profile_file, env_profile_file2;
-	std::vector< std::string > rsid;
 	int chunk_size, missing_code;
 	uint32_t start, end;
 	bool range, maf_lim, info_lim, mode_gen_pheno, mode_pred_pheno, mode_ssv, incl_snps, excl_snps;
 	bool keep_constant_variants, mode_print_keys;
-	bool select_rsid, mode_compute_correlations, use_raw_covars, use_raw_env, mode_low_mem;
+	bool mode_compute_correlations, use_raw_covars, use_raw_env, mode_low_mem;
 	double min_maf, min_info, sigma, hb, hg, hb2, hg2, hc, he;
 	bool rescale_coeffs, normalise_genotypes;
 	unsigned int random_seed;
@@ -46,7 +45,6 @@ public:
 		mode_compute_correlations = false;
 		incl_snps = false;
 		excl_snps = false;
-		select_rsid = false;
 		keep_constant_variants = false;
 		normalise_genotypes = true;
 		rescale_coeffs = false;

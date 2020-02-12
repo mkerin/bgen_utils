@@ -46,24 +46,16 @@ int main( int argc, char** argv ) {
 		}
 
 		// filter - incl rsids
-		if(p.incl_snps){
+		if(p.incl_rsids_file != "NULL"){
 			data.read_incl_rsids();
 			std::cout << "Filtering SNPs by rsid, using bgi file: " << p.bgi_file << std::endl;
 			query->include_rsids( data.incl_rsid_list );
 		}
 
-		if(p.excl_snps){
+		if(p.excl_rsids_file != "NULL"){
 			data.read_excl_rsids();
 			std::cout << "Filtering SNPs by rsid, using bgi file: " << p.bgi_file << std::endl;
 			query->exclude_rsids( data.excl_rsid_list );
-		}
-
-		// filter - select single rsid
-		if(p.select_rsid){
-			std::sort(p.rsid.begin(), p.rsid.end());
-			std::cout << "Filtering to rsids:" << std::endl;
-			for (int kk = 0; kk < p.rsid.size(); kk++) std::cout << p.rsid[kk]<< std::endl;
-			query->include_rsids( p.rsid );
 		}
 
 		// Summary info

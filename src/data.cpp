@@ -996,17 +996,13 @@ EigenDataMatrix Data::sort_coeffs(EigenRefDataMatrix orig,
 		genfile::bgen::IndexQuery::GenomicRange rr1(params.chr, params.start, params.end);
 		query->include_range( rr1 );
 	}
-	if(params.incl_snps) {
+	if(params.incl_rsids_file != "NULL") {
 		read_incl_rsids();
 		query->include_rsids(incl_rsid_list);
 	}
-	if(params.excl_snps) {
+	if(params.excl_rsids_file != "NULL") {
 		read_excl_rsids();
 		query->exclude_rsids(excl_rsid_list);
-	}
-	if(params.select_rsid) {
-		std::sort(params.rsid.begin(), params.rsid.end());
-		query->include_rsids(params.rsid);
 	}
 	query->initialise();
 
