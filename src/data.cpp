@@ -259,7 +259,7 @@ void Data::sim_pheno() {
 		double resid_pve = 1.0 - params.hc - params.he - params.hb - params.hg - params.hb2 - params.hg2;
 
 		// additive covar effects
-		if(params.hc > tol) {
+		if(params.hc > tol && var(Wtau) > tol) {
 			EigenDataVector tau(n_covar);
 			sim_gaussian_noise(tau, 1, generator);
 			Wtau = W * tau;
@@ -268,7 +268,7 @@ void Data::sim_pheno() {
 		}
 
 		// additive env effects
-		if(params.he > tol) {
+		if(params.he > tol && var(Ealpha) > tol) {
 			EigenDataVector alpha(n_env);
 			sim_gaussian_noise(alpha, 1, generator);
 			Ealpha = E * alpha;
@@ -281,25 +281,24 @@ void Data::sim_pheno() {
 		Xb       *= std::sqrt(params.sigma * params.hb / resid_pve / var_xb);
 		B.col(0) *= std::sqrt(params.sigma * params.hb / resid_pve / var_xb);
 
-		if(n_env > 0) {
+		if(n_env > 0 && var(Zg) > 0) {
 			scalarData var_zg = var(Zg);
-			if (var_zg > 0) {
-				double sf = std::sqrt(params.sigma * params.hg / resid_pve / var_zg);
-				Zg *= sf;
-				Xg *= sf;
-				B.block(0, 1, B.rows(), n_gxe_components) *= sf;
-			}
+			double sf = std::sqrt(params.sigma * params.hg / resid_pve / var_zg);
+			Zg *= sf;
+			Xg *= sf;
+			B.block(0, 1, B.rows(), n_gxe_components) *= sf;
 		}
 
 		if(params.coeffs2_file != "NULL") {
 			scalarData var_xb = var(Xb2);
-			double sf  = std::sqrt(params.sigma * params.hb2 / resid_pve / var_xb);
-			Xb2       *= sf;
-			B2.col(0) *= sf;
-
-			if(n_env > 0) {
+			if (var_xb > 0)
+				double sf = std::sqrt(params.sigma * params.hb2 / resid_pve / var_xb);
+				Xb2 *= sf;
+				B2.col(0) *= sf;
+			}
+			if(n_env > 0 && var(Zg2) > 0) {
 				scalarData var_zg = var(Zg2);
-				sf         = std::sqrt(params.sigma * params.hg2 / resid_pve / var_xb);
+				double sf  = std::sqrt(params.sigma * params.hg2 / resid_pve / var_xb);
 				Zg2       *= sf;
 				Xg2       *= sf;
 				B2.block(0, 1, B2.rows(), n_gxe_components2) *= sf;
