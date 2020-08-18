@@ -26,6 +26,7 @@ public:
 		bgi_file = "NULL";
 		env_file = "NULL";
 		env_profile_file = "NULL";
+		env_profile_file2 = "NULL";
 		covar_file = "NULL";
 		coeffs_file = "NULL";
 		coeffs2_file = "NULL";
