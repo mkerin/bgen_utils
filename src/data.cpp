@@ -90,7 +90,7 @@ void Data::gen_genetic_effects() {
 		read_coeffs2();
 		assert(n_gxe_components2 <= n_env);
 		if(n_env > 1 && params.env_profile_file2 != "NULL") {
-			read_env_profile();
+			read_env_profile2();
 			assert(env_profile2.cols() == n_gxe_components2);
 		} else if (n_env > 1) {
 			assert(B2.cols() == B.cols());
