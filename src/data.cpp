@@ -96,7 +96,7 @@ void Data::gen_genetic_effects() {
 			assert(B2.cols() == B.cols());
 			env_profile2 = env_profile;
 		} else if (n_env == 1) {
-			env_profile = EigenDataMatrix::Constant(1, 1, 1);
+			env_profile2 = EigenDataMatrix::Constant(1, 1, 1);
 		}
 	}
 
@@ -217,7 +217,8 @@ void Data::gen_genetic_effects() {
 	if(n_env > 0) {
 		Zg = (Xg * eta.array()).rowwise().sum();
 		if(params.coeffs2_file != "NULL") {
-			Zg2 = (Xg2 * eta.array()).rowwise().sum();
+			eta2 = E * env_profile;
+			Zg2 = (Xg2 * eta2.array()).rowwise().sum();
 		}
 		Y += Zg + Zg2;
 	}
