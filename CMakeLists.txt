@@ -4,13 +4,13 @@ project(bgen_utils VERSION 1.0.0)
 set(CMAKE_CXX_STANDARD 11)
 
 ##Compilation flags
-if(CMAKE_CURRENT_SOURCE_DIR MATCHES /Users/kerin)
+if(CMAKE_CURRENT_SOURCE_DIR MATCHES /Users/mkerin)
     message("Laptop build (OSX)")
-    set(BGEN /Users/kerin/software/bgen)
+    set(BGEN /Users/mkerin/software/bgen)
     message("Debug build")
     set(COMPILE_OPTS -DOSX -Wno-deprecated -Wno-parentheses -DDEBUG -pg -Og -g)
     set(LINKER_OPTS -Og -g)
-    set(LIB-DIRS "-L${BGEN}/build/3rd_party/boost_1_55_0 -L/usr/local/opt/boost@1.55/lib")
+    set(LIB-DIRS "-L${BGEN}/build/3rd_party/boost_1_55_0 -L/usr/local/Cellar/boost/1.73.0/lib")
 elseif(CMAKE_CURRENT_SOURCE_DIR MATCHES /well/marchini/kebl4230)
     # LINUX File System - Rescomp
     message("Rescomp build (Linux)")
