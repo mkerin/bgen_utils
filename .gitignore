@@ -4,6 +4,7 @@ lib/*
 3rd_party/*
 archive/*
 data/*
+unit/data/test_*
 tests/data/*
 
 cmake-build*
@@ -13,6 +14,9 @@ instruments*
 examples/*
 tests/*.bak
 tests/*.backup
+.vscode/*
+*.code-workspace
+
 
 # Ignore any executables
 bin/*
